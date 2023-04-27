@@ -19,25 +19,14 @@ CREATE TABLE cycle(
 );
 
 CREATE TABLE ranking(
-	idPlayer INTEGER NOT NULL AUTO_INCREMENT,
+	idRanking INTEGER NOT NULL AUTO_INCREMENT,
 	aliasPlayer VARCHAR(255) UNIQUE,
     timePlayed DOUBLE,
     correctTotems INTEGER,
     wrongTotems INTEGER,
     points INTEGER,
-    PRIMARY KEY(idPlayer)
-);
-
-CREATE TABLE game(
-	idGame INTEGER NOT NULL AUTO_INCREMENT,
-	timePlayed DOUBLE,
-    correctTotems INTEGER,
-    wrongTotems INTEGER,
-    points INTEGER,
-    ranking_idPlayer INTEGER NOT NULL,
-    cycle_idCycle INTEGER NOT NULL,
-	PRIMARY KEY(idGame),
-    FOREIGN KEY (ranking_idPlayer) REFERENCES ranking(idPlayer),
+	cycle_idCycle INTEGER NOT NULL,
+    PRIMARY KEY(idRanking),
     FOREIGN KEY (cycle_idCycle) REFERENCES cycle(idCycle)
 );
 
