@@ -29,6 +29,13 @@ function appListen () {
 
 app.post('/api/set_record', setRecord)
 async function setRecord (req, res) {
+  let receivedPost = await post.readPost(req);
+  try{
+
+  }catch(e){
+    console.log("ERROR: " + e.stack)
+    res.end(JSON.stringify({"status":"Error","message":"Failed to getset the records"}));
+  }
 }
 
 app.post('/api/get_ranking', getRanking)
