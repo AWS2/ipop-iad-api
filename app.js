@@ -29,6 +29,7 @@ function appListen () {
 
 app.post('/api/set_record', setRecord)
 async function setRecord (req, res) {
+  console.log("set_record");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
   try{
@@ -55,6 +56,7 @@ async function setRecord (req, res) {
 
 app.post('/api/get_ranking', getRanking)
 async function getRanking (req, res) {
+  console.log("get_ranking");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
   try{
@@ -100,11 +102,18 @@ function queryDatabase (query) {
 
   return new Promise((resolve, reject) => {
     var connection = mysql.createConnection({
-      host: process.env.MYSQLHOST || "localhost",
-      port: process.env.MYSQLPORT || 3306,
+      // host: process.env.MYSQLHOST || "localhost",
+      // port: process.env.MYSQLPORT || 3306,
+      // user: process.env.MYSQLUSER || "root",
+      // password: process.env.MYSQLPASSWORD || "localhost",
+      // database: process.env.MYSQLDATABASE || "ipop_game"
+
+      //Data to make it work in Railway
+      host: process.env.MYSQLHOST || "containers-us-west-10.railway.app",
+      port: process.env.MYSQLPORT || 5461,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "localhost",
-      database: process.env.MYSQLDATABASE || "ipop_game"
+      password: process.env.MYSQLPASSWORD || "ilUcdb0Lk1HF8iwUVwIh",
+      database: process.env.MYSQLDATABASE || "railway"
     });
 
     connection.query(query, (error, results) => { 
