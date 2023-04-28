@@ -32,17 +32,8 @@ async function setRecord (req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
   try{
-    let correctTotems = receivedPost.correctTotems;
-    let wrongTotems = receivedPost.wrongTotems;
-
-    /* Funcion para calcular la puntuación provisional, los fallos restan doble a la puntuación, 
-    no habra puntuación negativa */
-    let points = correctTotems - (wrongTotems *2);
-    if(points <0){
-      points = 0;
-    }
-    queryDatabase("INSERT INTO ranking (aliasPlayer, cycle_idCycle, points, timePlayed, correctTotems, wrongTotems) "
-    +"VALUES ('"+receivedPost.aliasPlayer+"', "+receivedPost.idCycle+", "+points+", "+receivedPost.timePlayed+", "+correctTotems+", "+wrongTotems+");")
+    queryDatabase("INSERT INTO ranking (aliasPlayer, cycle_idCycle, timeStart, timeEnd, correctTotems, wrongTotems) "
+    +"VALUES ('"+receivedPost.aliasPlayer+"', "+receivedPost.idCycle+", "+receivedPost.timeStart+", "+receivedPost.timeEnd+", "+receivedPost.correctTotems+", "+receivedPost.wrongTotems+");")
     .then((results) => {
       if (results.affectedRows > 0) {
         console.log("Insert operation was successful!");
@@ -67,8 +58,10 @@ async function getRanking (req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
   try{
-    var results = queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT 20;")
-    console.log(results);
+    let start = receivedPost.start;
+    let min = receivedPost.min;
+    var results = queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+min+";")
+    console.log("The result of the query get_ranking: "+results);
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
     }else{
