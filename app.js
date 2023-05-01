@@ -23,19 +23,30 @@ const port = process.env.PORT || 3001
 //app.use(express.static('public'))
 
 // Activate HTTP server
+
+/* He estado haciendo pruebas con las variables de entorno, 
+lo que de funcionar en Railway nos permitiria no tener que exponer contraseñas en el repo publico de Github  */
+
+/* Hay un metodo de prueba cuya función es mostrar los datos de la base de datos nada ams empieza la app, 
+para testear que conecta correctamente a la BBDD */
 const httpServer = app.listen(port, appListen)
 function appListen () {
   console.log(`Listening for HTTP queries on: http://localhost:${port}`)
+  console.log("The environment variables are MYSQLHOST: "+process.env.MYSQLHOST + "MYSQLUSER: "+process.env.MYSQLUSER + "MYSQLPASSWORD: "+process.env.MYSQLPASSWORD + "MYSQLDATABASE: "+process.env.MYSQLDATABASE);
+  getRankingTest();
 }
 
+/* Entrar un record o registro en el ranking, llama a una función para calcular
+los puntos, he comprobado en las specs que se requiere tener los puntos almacenados */
 app.post('/api/set_record', setRecord)
 async function setRecord (req, res) {
   console.log("set_record");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
   try{
-    queryDatabase("INSERT INTO ranking (aliasPlayer, cycle_idCycle, timeStart, timeEnd, correctTotems, wrongTotems) "
-    +"VALUES ('"+receivedPost.aliasPlayer+"', "+receivedPost.idCycle+", "+receivedPost.timeStart+", "+receivedPost.timeEnd+", "+receivedPost.correctTotems+", "+receivedPost.wrongTotems+");")
+    let points = calculatePoints(receivedPost.correctTotems, receivedPost.wrongTotems);
+    queryDatabase("INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) "
+    +"VALUES ('"+receivedPost.aliasPlayer+", "+receivedPost.timeStart+", "+receivedPost.timeEnd+", "+receivedPost.correctTotems+", "+receivedPost.wrongTotems+"', "+points+"', "+receivedPost.idCycle+");")
     .then((results) => {
       if (results.affectedRows > 0) {
         console.log("Insert operation was successful!");
@@ -77,6 +88,33 @@ async function getRanking (req, res) {
   }
 }
 
+async function getRankingTest () {
+  // console.log("get_rankingTest");
+  // try {
+  //   let start = 0;
+  //   let min = 20;
+  //   var results = await queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+min+";")
+  //   console.log("The result of the query getRankingTest: "+JSON.stringify(results));
+  // } catch (e) {
+  //   console.log("ERROR: " + e.stack);
+  // }
+  console.log("get_rankingTest");
+  console.log("The result of the query getRankingTest: "+JSON.stringify(await queryDatabase("SELECT * FROM ranking;")));
+}
+
+function calculatePoints(correctTotems, wrongTotems){
+  let points = 0;
+  points = correctTotems - (wrongTotems *2);
+  return points;
+}
+
+/* Si hace falta el server puede calcular el tiempo de duración de uan partida */
+function calculateTime(timeStart, timeEnd){
+  let time = 0;
+  time = timeEnd - timeStart;
+  return time;
+}
+
 function isValidNumber(number) {
   if(typeof number =="number"){
     return true;
@@ -103,25 +141,25 @@ function queryDatabase (query) {
 
   return new Promise((resolve, reject) => {
     var connection = mysql.createConnection({
-      // host: process.env.MYSQLHOST || "localhost",
-      // port: process.env.MYSQLPORT || 3306,
-      // user: process.env.MYSQLUSER || "root",
-      // password: process.env.MYSQLPASSWORD || "localhost",
-      // database: process.env.MYSQLDATABASE || "ipop_game"
-
-      //Data to make it work in Railway
-      host: process.env.MYSQLHOST || "containers-us-west-10.railway.app",
-      port: process.env.MYSQLPORT || 5461,
+      /* Data to make it work in local */
+      host: process.env.MYSQLHOST || "localhost",
+      port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "ilUcdb0Lk1HF8iwUVwIh",
-      database: process.env.MYSQLDATABASE || "railway"
+      password: process.env.MYSQLPASSWORD || "localhost",
+      database: process.env.MYSQLDATABASE || "ipop_game" 
+ 
+      /* Data to make it work in Railway */
+      // host: "containers-us-west-73.railway.app",
+      // port: 6341,
+      // user: "root",
+      // password: "xUdSTONECKujGLGas8WF",
+      // database: "railway" 
     });
 
     connection.query(query, (error, results) => { 
       if (error) reject(error);
       resolve(results)
     });
-     
     connection.end();
   })
 }

@@ -5,8 +5,8 @@ USE ipop_game;
 -- the tables will be resetted
 DROP TABLE IF EXISTS game;
 DROP TABLE IF EXISTS totem;
-DROP TABLE IF EXISTS cycle;
 DROP TABLE IF EXISTS ranking;
+DROP TABLE IF EXISTS cycle;
 DROP TABLE IF EXISTS professionalFamily;
 
 -- Statements to create the tables
@@ -20,11 +20,11 @@ CREATE TABLE cycle(
 
 CREATE TABLE ranking(
 	idRanking INTEGER NOT NULL AUTO_INCREMENT,
-	aliasPlayer VARCHAR(255) UNIQUE,
-    timePlayed DOUBLE,
+	aliasPlayer VARCHAR(255),
+    timeStart datetime,
+    timeEnd datetime,
     correctTotems INTEGER,
     wrongTotems INTEGER,
-    points INTEGER,
 	cycle_idCycle INTEGER NOT NULL,
     PRIMARY KEY(idRanking),
     FOREIGN KEY (cycle_idCycle) REFERENCES cycle(idCycle)
