@@ -18,8 +18,8 @@ let timeEndMatch;
 /* Variable para controlar si el juego esta en ejecucion o no */
 
 /* Variables para calcular fotogramas si dejamos eso en manso del server */
-let currentFPS =60;
-let TARGET_MS = 1000 / fps;
+let currentFPS = 60;
+let TARGET_MS = 1000 / currentFPS;
 let frameCount;
 let fpsStartTime;
 let gameRunning;
@@ -50,7 +50,7 @@ function appListen () {
   + " \nMYSQLPASSWORD: "+process.env.MYSQLPASSWORD + " \nMYSQLDATABASE: "+process.env.MYSQLDATABASE+" \nMYSQLPORT: "+process.env.MYSQLPORT);
   // console.log("random Number Generated: "+generateRandomNumber());
   
-  showRankingTest();
+  //showRankingTest();
   // const IP_Client = req.connection.remoteAddress;
 }
 
@@ -74,7 +74,7 @@ async function setRecord (req, res) {
   let receivedPost = await post.readPost(req);
   try{
     let points = calculatePoints(receivedPost.correctTotems, receivedPost.wrongTotems);
-    queryDatabase("INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) "
+    await queryDatabase("INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) "
     +"VALUES ('"+receivedPost.aliasPlayer+", "+receivedPost.timeStart+", "+receivedPost.timeEnd+", "+receivedPost.correctTotems+", "+receivedPost.wrongTotems+"', "+points+"', "+receivedPost.idCycle+");")
     .then((results) => {
       if (results.affectedRows > 0) {
@@ -100,16 +100,15 @@ app.post('/api/get_ranking', getRanking)
 async function getRanking (req, res) {
   console.log("get_ranking");
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  let receivedPost = await post.readPost(req);
+  let receivedPost = await post.getPostObject(req);
   try{
     let start = receivedPost.start;
     let end = receivedPost.end;
-    var results = queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+end+";")
-    console.log("The result of the query get_ranking: "+results);
+    var results = await queryDatabase("SELECT * FROM ranking WHERE idRanking BETWEEN " + start +  " AND " + end + ";")    
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
     }else{
-      res.end(JSON.stringify({"status":"OK","message": "No records found at the database"}));
+      res.end(JSON.stringify({"status":"Error","message": results}));
     }
     
   }catch(e){
@@ -277,7 +276,7 @@ function queryDatabase (query) {
       host: process.env.MYSQLHOST || "localhost",
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "localhost",
+      password: process.env.MYSQLPASSWORD || "P@ssw0rd",
       database: process.env.MYSQLDATABASE || "ipop_game"
     });
 
