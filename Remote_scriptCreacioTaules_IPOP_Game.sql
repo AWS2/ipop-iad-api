@@ -2,7 +2,7 @@ USE railway;
 
 -- the tables will be resetted
 DROP TABLE IF EXISTS game;
-DROP TABLE IF EXISTS totem;
+DROP TABLE IF EXISTS ocupation;
 DROP TABLE IF EXISTS ranking;
 DROP TABLE IF EXISTS cycle;
 DROP TABLE IF EXISTS professionalFamily;
@@ -36,11 +36,11 @@ CREATE TABLE professionalFamily(
 	PRIMARY KEY(idFamily)
 );
 
-CREATE TABLE totem(
-	idTotem INTEGER NOT NULL AUTO_INCREMENT,
-    descriptionTotem VARCHAR(255),
+CREATE TABLE ocupation(
+	idocupation INTEGER NOT NULL AUTO_INCREMENT,
+    descriptionOcupation VARCHAR(255),
     cycle_idCycle INTEGER,
-	PRIMARY KEY(idTotem),
+	PRIMARY KEY(idocupation),
     FOREIGN KEY (cycle_idCycle) REFERENCES cycle(idCycle)
 );
 
@@ -71,8 +71,8 @@ INSERT INTO professionalFamily (idFamily, nameFamily, link) VALUES
 (5, 'Fabricació mecànica', 'https://treball.barcelonactiva.cat/porta22/cat/sector/pagina51495/industria-manufacturera-i-40.do'),
 (6, 'Aigües', 'https://treball.barcelonactiva.cat/porta22/cat/sector/pagina51492/economia-verda-i-circular.do');
 
--- INSERT statements for totem table
-INSERT INTO totem (descriptionTotem, cycle_idCycle) VALUES
+-- INSERT statements for ocupation table
+INSERT INTO ocupation (descriptionOcupation, cycle_idCycle) VALUES
 ('a) Personal tècnic instal·lador-reparador d’equips informàtics.', 1),
 ('b) Personal tècnic de suport informàtic. ', 1),
 ('c) Personal tècnic de suport informàtic. ', 1),
@@ -206,6 +206,3 @@ VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
 VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3);
-
-
-
