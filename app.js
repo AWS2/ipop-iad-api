@@ -2,11 +2,27 @@ const express = require('express')
 const fs = require('fs/promises')
 const url = require('url')
 const mysql = require('mysql2')
-const oldPost = require('./post.js')
-const post = require('./utilsPost.js')
+const post = require('./post.js')
 const { v4: uuidv4 } = require('uuid')
 const { response } = require('express')
 const { stat } = require('fs')
+
+/* La idea de esta variable es diferenciar entre primer cliente que se conecta con ws, segundo que se conecta, etc
+en la practica del Pong me sirvio, pero no estoy del todo seguro que nos vaya a hacer falta */
+let clientNumber;
+
+/* Variables para que el server mida el tiempo en partida multijugador */
+let timeStartMatch;
+let timeEndMatch;
+
+/* Variable para controlar si el juego esta en ejecucion o no */
+
+/* Variables para calcular fotogramas si dejamos eso en manso del server */
+let currentFPS =60;
+let TARGET_MS = 1000 / fps;
+let frameCount;
+let fpsStartTime;
+let gameRunning;
 
 // Wait 'ms' milliseconds
 function wait (ms) {
@@ -22,22 +38,35 @@ const port = process.env.PORT || 3001
 // Publish static files from 'public' folder
 //app.use(express.static('public'))
 
+/* 
+*** SERVERS WSS Y HTTP ***
+ */
+
 // Activate HTTP server
-
-/* He estado haciendo pruebas con las variables de entorno, 
-lo que de funcionar en Railway nos permitiria no tener que exponer contraseñas en el repo publico de Github  */
-
-/* Hay un metodo de prueba cuya función es mostrar los datos de la base de datos nada ams empieza la app, 
-para testear que conecta correctamente a la BBDD */
 const httpServer = app.listen(port, appListen)
 function appListen () {
   console.log(`Listening for HTTP queries on: http://localhost:${port}`)
-  console.log("The environment variables are MYSQLHOST: "+process.env.MYSQLHOST + "MYSQLUSER: "+process.env.MYSQLUSER + "MYSQLPASSWORD: "+process.env.MYSQLPASSWORD + "MYSQLDATABASE: "+process.env.MYSQLDATABASE);
-  getRankingTest();
+  console.log("ENVIRONMENT: The environment variables are:\nMYSQLHOST: "+process.env.MYSQLHOST + " \nMYSQLUSER: "+process.env.MYSQLUSER 
+  + " \nMYSQLPASSWORD: "+process.env.MYSQLPASSWORD + " \nMYSQLDATABASE: "+process.env.MYSQLDATABASE+" \nMYSQLPORT: "+process.env.MYSQLPORT);
+  // console.log("random Number Generated: "+generateRandomNumber());
+  
+  showRankingTest();
+  // const IP_Client = req.connection.remoteAddress;
 }
 
+// Run WebSocket server
+const WebSocket = require('ws')
+const wss = new WebSocket.Server({ server: httpServer })
+const socketsClients = new Map()
+console.log(`Listening for WebSocket queries on ${port}`)
+
+/* 
+*** FUNCIONALIDADES DE SERVER HTTP ***
+*/
+
 /* Entrar un record o registro en el ranking, llama a una función para calcular
-los puntos, he comprobado en las specs que se requiere tener los puntos almacenados */
+los puntos, he comprobado en las specs que se requiere tener los puntos almacenados 
+*/
 app.post('/api/set_record', setRecord)
 async function setRecord (req, res) {
   console.log("set_record");
@@ -66,6 +95,7 @@ async function setRecord (req, res) {
   }
 }
 
+/* Conseguir los records o registros, el post le especificara */
 app.post('/api/get_ranking', getRanking)
 async function getRanking (req, res) {
   console.log("get_ranking");
@@ -73,8 +103,8 @@ async function getRanking (req, res) {
   let receivedPost = await post.readPost(req);
   try{
     let start = receivedPost.start;
-    let min = receivedPost.min;
-    var results = queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+min+";")
+    let end = receivedPost.end;
+    var results = queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+end+";")
     console.log("The result of the query get_ranking: "+results);
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
@@ -88,32 +118,76 @@ async function getRanking (req, res) {
   }
 }
 
-async function getRankingTest () {
-  // console.log("get_rankingTest");
-  // try {
-  //   let start = 0;
-  //   let min = 20;
-  //   var results = await queryDatabase("SELECT * FROM ranking ORDER BY points DESC LIMIT "+start+", "+min+";")
-  //   console.log("The result of the query getRankingTest: "+JSON.stringify(results));
-  // } catch (e) {
-  //   console.log("ERROR: " + e.stack);
-  // }
+/* 
+*** FUNCIONALIDADES DE SERVER WS ***
+*/
+// What to do when a websocket client connects
+wss.on('connection', (ws) => {
+  console.log("Client connected")
+  console.log('socketsClients Map:');
+  for (const [key, value] of socketsClients.entries()) {
+    console.log(`  ${key} => ${value}`);
+  }
+
+  // Add client to the clients list
+
+  /* Con client number podemos contar cuantos clientes se han identificado */
+  const id = uuidv4()
+  console.log("Client id: " + id)
+  const color = Math.floor(Math.random() * 360)
+  const metadata = { id, color, clientNumber}
+  clientNumber++;
+  socketsClients.set(ws, metadata)
+
+  ws.send(JSON.stringify({type: "infoConnection", clientNumber: metadata.clientNumber}))
+
+  // What to do when a client is disconnected
+  ws.on("close", () => {
+    socketsClients.delete(ws)
+    clientNumber--;
+    let idClientDisconnected = metadata.id
+    console.log("Client disconnected: "+idClientDisconnected);
+  })
+
+  // What to do when a client message is received
+  ws.on('message', (bufferedMessage) => {
+    // console.log("Message received from client: " + bufferedMessage)
+
+    var messageAsString = bufferedMessage.toString()
+    var messageAsObject = {}
+    
+    try { messageAsObject = JSON.parse(messageAsString) } 
+    catch (e) { console.log("Could not parse bufferedMessage from WS message") }
+
+    /* Segun el parametro type (u otro que mandemos en el ws) podremos activar un codigo u otro
+    aqui podria ir el codigo de que hacer cuando un usuario se conecta e indica que quiere jugar*/
+    if(messageAsObject.type == "startGame"){
+      
+    }
+
+    /* Este podria ser el mensaje del WebSocket para indicar que un usuario quiere dejar de jugar 
+    Empezar a jugar y o dejar de jugar podrian ser tratados tambien con http*/
+    if(messageAsObject.type == "stopGame"){
+    }
+
+    /* Aqui se deben recoger y tratar los datos que envie cada cliente respecto a su movimiento */
+    if(messageAsObject.type == "movementInfo"){
+      }
+
+    // console.log("Will respond " +JSON.stringify(rst));
+    ws.send(JSON.stringify(rst));
+  })
+})
+
+/* 
+*** OTRAS FUNCIONES COMPLEMENTARIAS ***
+ */
+
+async function showRankingTest(){
   console.log("get_rankingTest");
-  console.log("The result of the query getRankingTest: "+JSON.stringify(await queryDatabase("SELECT * FROM ranking;")));
+  console.log("The result of the query getRankingTest: "+JSON.stringify(await queryDatabase("SELECT * FROM ranking ORDER BY points DESC;")));
 }
 
-function calculatePoints(correctTotems, wrongTotems){
-  let points = 0;
-  points = correctTotems - (wrongTotems *2);
-  return points;
-}
-
-/* Si hace falta el server puede calcular el tiempo de duración de uan partida */
-function calculateTime(timeStart, timeEnd){
-  let time = 0;
-  time = timeEnd - timeStart;
-  return time;
-}
 
 function isValidNumber(number) {
   if(typeof number =="number"){
@@ -123,6 +197,11 @@ function isValidNumber(number) {
   }
 }
 
+function generateRandomNumber() {
+  return Math.floor(Math.random() * 1000) + 1;
+}
+
+
 function getDate(){
   var now = new Date();
   var formatedDate = now.getFullYear()+"/"+now.getMonth()+"/"+now.getDay()+" ";
@@ -130,9 +209,63 @@ function getDate(){
   return formatedDate;
 }
 
-function checkEmail(str){
-  var filter = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return filter.test(str);
+function startGame(){
+  timeStartMatch = getDate();
+  gameRunning = true;
+
+}
+
+/* 
+*** FUNCIONES PARA LA LOGICA DEL MULTIJUGADOR ***
+*/
+
+/* Funcion de la practica de Pong, sin la logica del pong, habra que poner la logica de nuestro juego */
+function gameLoop(){
+  try{
+    const startTime = Date.now();
+
+    if (currentFPS >= 1) {
+      // Cridar aquí la funció que actualitza el joc (segons currentFPS)
+
+      try{
+  
+        if(fps < 1){
+          return;
+        }
+
+
+      }catch(err){
+        console.log(err);
+      }
+
+      // Cridar aquí la funció que fa un broadcast amb les dades del joc a tots els clients
+      var gameInfo = {};
+      var rst = { type: "gameInfoBroadcast", gameInfo: gameInfo };
+      broadcast(rst)
+  }
+
+  }catch(err){
+    console.log(err);
+  }
+}
+
+function stopLoop(){
+  try{
+    timeEndMatch = getDate();
+  }catch(err){
+    console.log(err);
+  }
+}
+
+// Send a message to all websocket clients
+async function broadcast (obj) {
+  // console.log("Broadcasting message to all clients: " + JSON.stringify(obj))
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      var messageAsString = JSON.stringify(obj)
+      client.send(messageAsString)
+    }
+  })
 }
 
 
@@ -141,25 +274,18 @@ function queryDatabase (query) {
 
   return new Promise((resolve, reject) => {
     var connection = mysql.createConnection({
-      /* Data to make it work in local */
       host: process.env.MYSQLHOST || "localhost",
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
       password: process.env.MYSQLPASSWORD || "localhost",
-      database: process.env.MYSQLDATABASE || "ipop_game" 
- 
-      /* Data to make it work in Railway */
-      // host: "containers-us-west-73.railway.app",
-      // port: 6341,
-      // user: "root",
-      // password: "xUdSTONECKujGLGas8WF",
-      // database: "railway" 
+      database: process.env.MYSQLDATABASE || "ipop_game"
     });
 
     connection.query(query, (error, results) => { 
       if (error) reject(error);
       resolve(results)
     });
+     
     connection.end();
   })
 }
