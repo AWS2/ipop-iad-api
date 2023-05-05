@@ -209,5 +209,13 @@ VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2);
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
 VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3);
 
+INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
+VALUES ('DavidII', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 16, 2, 12, 1);
+
+INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
+VALUES ('Ivan_2', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 21, 5, 11, 1);
+
+
+
 
 

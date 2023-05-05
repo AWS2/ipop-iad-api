@@ -6,6 +6,7 @@ const post = require('./post.js')
 const { v4: uuidv4 } = require('uuid')
 const { response } = require('express')
 const { stat } = require('fs')
+const Totem = require('./totem.js')
 
 /* La idea de esta variable es diferenciar entre primer cliente que se conecta con ws, segundo que se conecta, etc
 en la practica del Pong me sirvio, pero no estoy del todo seguro que nos vaya a hacer falta */
@@ -23,6 +24,10 @@ let TARGET_MS = 1000 / currentFPS;
 let frameCount;
 let fpsStartTime;
 let gameRunning;
+
+/* Variables para ubicar los totems en el escenario */
+let sceneGameWidth = 1000;
+let sceneGameHeight = 1000;
 
 // Wait 'ms' milliseconds
 function wait (ms) {
@@ -117,6 +122,8 @@ async function getRanking (req, res) {
   }
 }
 
+
+
 /* 
 *** FUNCIONALIDADES DE SERVER WS ***
 */
@@ -196,9 +203,42 @@ function isValidNumber(number) {
   }
 }
 
-function generateRandomNumber() {
-  return Math.floor(Math.random() * 1000) + 1;
+async function generateTotemsList(idCycle, numberOfTotems) {
+  const totems = [];
+
+  // Generate totems for the specified idCycle
+  for (let i = 0; i < numberOfTotems; i++) {
+    const totem = await generateTotem(idCycle);
+    totems.push(totem);
+  }
+
+  // Get a list of other idCycles in the database
+  const cycles = await queryDatabase("SELECT DISTINCT idCycle FROM cycle WHERE idCycle != ?", [idCycle]);
+  const otherCycles = cycles.map((cycle) => cycle.idCycle);
+
+  // Generate totems for the other idCycles
+  for (let i = 0; i < numberOfTotems; i++) {
+    const randomCycleId = otherCycles[Math.floor(Math.random() * otherCycles.length)];
+    const totem = await generateTotem(randomCycleId);
+    totems.push(totem);
+  }
+
+  return totems;
 }
+
+async function generateTotem(idCycle) {
+  const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
+  const nameCycle = cycles[0].nameCycle;
+
+  const occupations = await queryDatabase(`SELECT * FROM ocupation WHERE cycle_idCycle=${idCycle} ORDER BY RAND() LIMIT 1`);
+  const descriptionOcupation = occupations[0].descriptionOcupation;
+
+  const posX = Math.floor(Math.random() * sceneGameWidth);
+  const posY = Math.floor(Math.random() * sceneGameHeight);
+
+  return new totem(descriptionOcupation, nameCycle, posX, posY);
+}
+
 
 
 function getDate(){
@@ -215,8 +255,17 @@ function startGame(){
 }
 
 /* 
-*** FUNCIONES PARA LA LOGICA DEL MULTIJUGADOR ***
+*** FUNCIONES PARA LA LOGICA DEL JUEGO ***
 */
+
+function generateTotem(idCycle){
+  let text;
+  let cycleLabel;
+  let posX;
+  let posY;
+  let newTotem;
+
+}
 
 /* Funcion de la practica de Pong, sin la logica del pong, habra que poner la logica de nuestro juego */
 function gameLoop(){
