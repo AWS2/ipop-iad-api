@@ -104,13 +104,36 @@ async function getRanking (req, res) {
   try{
     let start = receivedPost.start;
     let end = receivedPost.end;
-    var results = await queryDatabase("SELECT * FROM ranking WHERE idRanking BETWEEN " + start +  " AND " + end + ";")    
+    var results = await queryDatabase("SELECT * FROM ranking WHERE idRanking BETWEEN " + start +  " AND " + end + " ORDER BY points ASC;")    
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
     }else{
       res.end(JSON.stringify({"status":"Error","message": results}));
     }
     
+  }catch(e){
+    console.log("ERROR: " + e.stack)
+    res.end(JSON.stringify({"status":"Error","message":"There has been some error"}));
+  }
+}
+
+/* Conseguir los records o registros, el post le especificara */
+app.post('/api/hide_ranking', hide_ranking)
+async function hide_ranking (req, res) {
+  console.log("hide_ranking");
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  let receivedPost = await post.getPostObject(req);
+  try{
+    let idRanking = receivedPost.idRanking;
+    let isVisible = receivedPost.visibility;
+    console.log(isVisible)
+    if (isVisible === true) {
+      console.log("UPDATE ranking SET isVisible = false WHERE idRanking = " + idRanking + ";")
+      await queryDatabase("UPDATE ranking SET isVisible = true WHERE idRanking = " + idRanking + ";")    
+    } else {
+      console.log("UPDATE ranking SET isVisible = false WHERE idRanking = " + idRanking + ";")
+      await queryDatabase("UPDATE ranking SET isVisible = false WHERE idRanking = " + idRanking + ";")    
+    }
   }catch(e){
     console.log("ERROR: " + e.stack)
     res.end(JSON.stringify({"status":"Error","message":"There has been some error"}));
