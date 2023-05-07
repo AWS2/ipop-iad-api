@@ -399,6 +399,7 @@ function isOverlappingUnsuitableZone(totem, unsuitableZones) {
 }
 
 async function recalculateTotems() {
+  this.listTotemsMultiplayer = [];
   let sceneGameWidth = currentModelScene.sceneGameWidth;
   let sceneGameHeight = currentModelScene.sceneGameHeight;
   let unsuitableZones = currentModelScene.unsuitableZones;
