@@ -86,33 +86,39 @@ function appListen () {
 /* Entrar un record o registro en el ranking, llama a una función para calcular
 los puntos, he comprobado en las specs que se requiere tener los puntos almacenados 
 */
-app.post('/api/set_record', setRecord)
-async function setRecord (req, res) {
-  console.log("set_record");
+app.post('/api/set_ranking', setRanking)
+
+async function setRanking(req, res) {
+  console.log("set_ranking");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.readPost(req);
-  try{
+  try {
     let points = calculatePoints(receivedPost.correctTotems, receivedPost.wrongTotems);
-    await queryDatabase("INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) "
-    +"VALUES ('"+receivedPost.aliasPlayer+", "+receivedPost.timeStart+", "+receivedPost.timeEnd+", "+receivedPost.correctTotems+", "+receivedPost.wrongTotems+"', "+points+"', "+receivedPost.idCycle+");")
-    .then((results) => {
-      if (results.affectedRows > 0) {
-        console.log("Insert operation was successful!");
-        res.end(JSON.stringify({"status":"OK","message":"Insert operation was successful!"}));
-      } else {
-        console.log("Insert operation did not insert any rows.");
-        res.end(JSON.stringify({"status":"OK","message":"Insert operation did not insert any rows."}));
-      }
-    })
-    .catch((error) => {
-      console.error("Error executing insert query:", error);
-      res.end(JSON.stringify({"status":"OK","message":"Error executing insert query"}));
-    });
-  }catch(e){
+    let resultIdCycle = await ("SELECT idCycle FROM cycle WHERE nameCycle = " + receivedPost.nameCycle + ";");
+    let idCycle = resultIdCycle[0].idCycle;
+
+    let query = `INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
+                 VALUES ('${receivedPost.aliasPlayer}', '${receivedPost.timeStart}', '${receivedPost.timeEnd}', '${receivedPost.correctTotems}', 
+                         '${receivedPost.wrongTotems}', '${points}', '${idCycle}');`
+    queryDatabase(query).then((results) => {
+        if (results.affectedRows > 0) {
+          console.log("Insert operation was successful!");
+          res.end(JSON.stringify({ "status": "OK", "message": "Insert operation was successful!", "inserted": true }));
+        } else {
+          console.log("Insert operation did not insert any rows.");
+          res.end(JSON.stringify({ "status": "OK", "message": "Insert operation did not insert any rows.", "inserted": false }));
+        }
+      })
+      .catch((error) => {
+        console.error("Error executing insert query:", error);
+        res.end(JSON.stringify({ "status": "OK", "message": "Error executing insert query", "inserted": false  }));
+      });
+  } catch (e) {
     console.log("ERROR: " + e.stack)
-    res.end(JSON.stringify({"status":"Error","message":"Failed to add the record"}));
+    res.end(JSON.stringify({ "status": "Error", "message": "Error in the function to add the record", "inserted": false  }));
   }
 }
+
 
 /* Conseguir los records o registros, el post le especificara */
 app.post('/api/get_ranking', getRanking)
