@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS ipop_game;
 USE ipop_game;
 
 -- the tables will be resetted
-DROP TABLE IF EXISTS game;
+DROP TABLE IF EXISTS connections;
 DROP TABLE IF EXISTS ocupation;
 DROP TABLE IF EXISTS ranking;
 DROP TABLE IF EXISTS cycle;
@@ -45,6 +45,14 @@ CREATE TABLE ocupation(
     cycle_idCycle INTEGER,
 	PRIMARY KEY(idocupation),
     FOREIGN KEY (cycle_idCycle) REFERENCES cycle(idCycle)
+);
+
+CREATE TABLE connections(
+	idConnection INTEGER NOT NULL AUTO_INCREMENT,
+    ip VARCHAR(255),
+    timeConnextion DATETIME,
+    uuidv4 VARCHAR(255),
+    PRIMARY KEY(idConnection)
 );
 
 -- INSERT statements for cycle table
