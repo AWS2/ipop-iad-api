@@ -25,7 +25,7 @@ CREATE TABLE ranking(
     wrongTotems INTEGER,
     points INTEGER,
 	cycle_idCycle INTEGER NOT NULL,
-    isVisible BOOLEAN,
+    isVisible boolean,
     PRIMARY KEY(idRanking),
     FOREIGN KEY (cycle_idCycle) REFERENCES cycle(idCycle)
 );
@@ -205,11 +205,14 @@ INSERT INTO ocupation (descriptionOcupation, cycle_idCycle) VALUES
 ('g) Técnico en gestión del uso eficiente del agua', 14),
 ('h) Técnico en sistemas de distribución de agua.', 14);
 
-INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible)
-VALUES 
-('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true),
+INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
+VALUES ('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true),
 ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true),
-('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, true),
+('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false),
 ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true),
-('DavidII', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 16, 2, 12, 1, true),
-('Ivan_2', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 21, 5, 11, 1, true);
+('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true),
+('Ivan2', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true),
+('AlbertIII', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false),
+('Ivan3', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true),
+('DavidII', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
+

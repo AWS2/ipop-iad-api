@@ -91,7 +91,7 @@ app.post('/api/set_ranking', setRanking)
 async function setRanking(req, res) {
   console.log("set_ranking");
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  let receivedPost = await post.readPost(req);
+  let receivedPost = await post.getPostObject(req);
   try {
     let points = calculatePoints(receivedPost.correctTotems, receivedPost.wrongTotems);
     let resultIdCycle = await ("SELECT idCycle FROM cycle WHERE nameCycle = " + receivedPost.nameCycle + ";");
@@ -118,6 +118,11 @@ async function setRanking(req, res) {
     res.end(JSON.stringify({ "status": "Error", "message": "Error in the function to add the record", "inserted": false  }));
   }
 }
+
+function calculatePoints(correctTotems, wrongTotems) {
+  return (correctTotems - (wrongTotems *2));
+}
+
 
 
 /* Conseguir los records o registros, el post le especificara */
@@ -178,7 +183,7 @@ async function hide_ranking (req, res) {
   try{
     let idRanking = receivedPost.idRanking;
     let isVisible = receivedPost.isVisible;
-    console.log(isVisible)
+    // console.log(isVisible)
     if (isVisible === true) {
       console.log("UPDATE ranking SET isVisible = true WHERE idRanking = " + idRanking + ";")
       await queryDatabase("UPDATE ranking SET isVisible = true WHERE idRanking = " + idRanking + ";")    

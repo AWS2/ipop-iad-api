@@ -208,61 +208,61 @@ INSERT INTO ocupation (descriptionOcupation, cycle_idCycle) VALUES
 ('h) Técnico en sistemas de distribución de agua.', 14);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('0David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
+VALUES ('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('1Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
+VALUES ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('2Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
+VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('3AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('4David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
+VALUES ('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('5Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
+VALUES ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('6Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
+VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('7AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('8David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
+VALUES ('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('9Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
+VALUES ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('10Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
+VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('11AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('12David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
+VALUES ('David', '2023-04-30 10:00:00', '2023-04-30 10:10:00', 12, 2, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('13Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
+VALUES ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('14Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
+VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('15AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('16AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, false);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('17Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
+VALUES ('Ivan', '2023-04-30 12:00:00', '2023-04-30 12:08:12', 16, 4, 8, 1, true);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('18Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
+VALUES ('Albert', '2023-04-29 15:00:00', '2023-04-29 15:06:25', 12, 3, 6, 2, false);
 
 INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle, isVisible) 
-VALUES ('19AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
+VALUES ('AlbertII', '2023-04-28 18:00:00', '2023-04-28 18:09:55', 10, 4, 2, 3, true);
