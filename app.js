@@ -93,7 +93,7 @@ async function setRanking(req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.getPostObject(req);
   try {
-    let points = calculatePoints(receivedPost.correctTotems, receivedPost.wrongTotems);
+    let points = (receivedPost.correctTotems - (receivedPost.wrongTotems *2));
     let resultIdCycle = await ("SELECT idCycle FROM cycle WHERE nameCycle = " + receivedPost.nameCycle + ";");
     let idCycle = resultIdCycle[0].idCycle;
 
@@ -118,12 +118,6 @@ async function setRanking(req, res) {
     res.end(JSON.stringify({ "status": "Error", "message": "Error in the function to add the record", "inserted": false  }));
   }
 }
-
-function calculatePoints(correctTotems, wrongTotems) {
-  return (correctTotems - (wrongTotems *2));
-}
-
-
 
 /* Conseguir los records o registros, el post le especificara */
 app.post('/api/get_ranking', getRanking)
