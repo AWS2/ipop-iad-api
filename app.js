@@ -80,6 +80,8 @@ function appListen () {
   addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
   recalculateTotems();
   console.log("List of players connected:"+ listPlayersConnected);
+  // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
+  // testSetRanking(jsonRanking);
 
 }
 
@@ -87,37 +89,109 @@ function appListen () {
 los puntos, he comprobado en las specs que se requiere tener los puntos almacenados 
 */
 app.post('/api/set_ranking', setRanking)
-
 async function setRanking(req, res) {
   console.log("set_ranking");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.getPostObject(req);
   try {
     let points = (receivedPost.correctTotems - (receivedPost.wrongTotems *2));
-    let resultIdCycle = await ("SELECT idCycle FROM cycle WHERE nameCycle = " + receivedPost.nameCycle + ";");
-    let idCycle = resultIdCycle[0].idCycle;
+    let nameCycle = receivedPost.nameCycle;
+    let resultIdCycle = await queryDatabase(`SELECT idCycle FROM cycle WHERE nameCycle = '${nameCycle}';`);
+        if (resultIdCycle.length > 0) {
+      let idCycle = resultIdCycle[0].idCycle;
+      console.log(`Cycle id for ${nameCycle}: ${idCycle}`);
 
-    let query = `INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
-                 VALUES ('${receivedPost.aliasPlayer}', '${receivedPost.timeStart}', '${receivedPost.timeEnd}', '${receivedPost.correctTotems}', 
+      console.log(`Time start: ${receivedPost.timeStart} Time end: ${receivedPost.timeEnd}`);
+      let receivedDateStart = new Date(receivedPost.timeStart);
+      let receivedDateEnd = new Date(receivedPost.timeEnd);
+      console.log(`Time start receivedData: ${receivedDateStart}`);
+      console.log(`Time end receivedData: ${receivedDateEnd}`);
+      let formattedDateStart = receivedDateStart.toISOString().slice(0, 19).replace('T', ' ');
+      let formattedDateEnd = receivedDateEnd.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Time start formatted: ${formattedDateStart}`);
+      console.log(`Time end formatted: ${formattedDateEnd}`);
+      let query = `INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
+                 VALUES ('${receivedPost.aliasPlayer}', '${formattedDateStart}', '${formattedDateEnd}', '${receivedPost.correctTotems}', 
                          '${receivedPost.wrongTotems}', '${points}', '${idCycle}');`
-    queryDatabase(query).then((results) => {
-        if (results.affectedRows > 0) {
-          console.log("Insert operation was successful!");
-          res.end(JSON.stringify({ "status": "OK", "message": "Insert operation was successful!", "inserted": true }));
-        } else {
-          console.log("Insert operation did not insert any rows.");
-          res.end(JSON.stringify({ "status": "OK", "message": "Insert operation did not insert any rows.", "inserted": false }));
-        }
-      })
-      .catch((error) => {
-        console.error("Error executing insert query:", error);
-        res.end(JSON.stringify({ "status": "OK", "message": "Error executing insert query", "inserted": false  }));
-      });
+    
+      queryDatabase(query).then((results) => {
+          if (results.affectedRows > 0) {
+            console.log("Insert operation was successful!");
+            console.log({ "status": "OK", "message": "Insert operation was successful!", "inserted": true });
+            res.end(JSON.stringify({ "status": "OK", "message": "Insert operation was successful!", "inserted": true }));
+          } else {
+            console.log("Insert operation did not insert any rows.");
+            console.log({ "status": "OK", "message": "Insert operation did not insert any rows.", "inserted": false });
+            res.end(JSON.stringify({ "status": "OK", "message": "Insert operation did not insert any rows.", "inserted": false }));
+          }
+        })
+        .catch((error) => {
+          console.error("Error executing insert query:", error);
+          console.log({ "status": "OK", "message": "Error executing insert query", "inserted": false  });
+          res.end(JSON.stringify({ "status": "OK", "message": "Error executing insert query", "inserted": false  }));
+        });
+    } else {
+      console.log(`Cycle '${nameCycle}' not found`);
+      console.log({ "status": "Error", "message": `Cycle '${nameCycle}' not found`, "inserted": false  });
+      res.end(JSON.stringify({ "status": "Error", "message": `Cycle '${nameCycle}' not found`, "inserted": false  }));
+    }
   } catch (e) {
-    console.log("ERROR: " + e.stack)
-    res.end(JSON.stringify({ "status": "Error", "message": "Error in the function to add the record", "inserted": false  }));
+    console.error("Error executing insert query:", e);
+    res.end(JSON.stringify({ "status": "OK", "message": "Error executing insert query", "inserted": false  }));
   }
 }
+
+/* Funcion para hacer pruebas con setRanking, se le pasa directamente un json que simula lo que recibiria por el post */
+async function testSetRanking(jsonPost) {
+  console.log("testSetRanking");
+  let receivedPost = jsonPost;
+  try {
+    let points = receivedPost.correctTotems - receivedPost.wrongTotems * 2;
+    let nameCycle = receivedPost.nameCycle;
+
+    // Get cycle id from cycle name
+    let resultIdCycle = await queryDatabase(`SELECT idCycle FROM cycle WHERE nameCycle = '${nameCycle}'`);
+    if (resultIdCycle.length > 0) {
+      let idCycle = resultIdCycle[0].idCycle;
+      console.log(`Cycle id for ${nameCycle}: ${idCycle}`);
+
+      console.log(`Time start: ${receivedPost.timeStart} Time end: ${receivedPost.timeEnd}`);
+      let receivedDateStart = new Date(receivedPost.timeStart);
+      let receivedDateEnd = new Date(receivedPost.timeEnd);
+      console.log(`Time start receivedData: ${receivedDateStart}`);
+      console.log(`Time end receivedData: ${receivedDateEnd}`);
+      let formattedDateStart = receivedDateStart.toISOString().slice(0, 19).replace('T', ' ');
+      let formattedDateEnd = receivedDateEnd.toISOString().slice(0, 19).replace('T', ' ');
+      console.log(`Time start formatted: ${formattedDateStart}`);
+      console.log(`Time end formatted: ${formattedDateEnd}`);
+      let query = `INSERT INTO ranking (aliasPlayer, timeStart, timeEnd, correctTotems, wrongTotems, points, cycle_idCycle) 
+                 VALUES ('${receivedPost.aliasPlayer}', '${formattedDateStart}', '${formattedDateEnd}', '${receivedPost.correctTotems}', 
+                         '${receivedPost.wrongTotems}', '${points}', '${idCycle}');`
+    
+      queryDatabase(query).then((results) => {
+          if (results.affectedRows > 0) {
+            console.log("Insert operation was successful!");
+            console.log({ "status": "OK", "message": "Insert operation was successful!", "inserted": true });
+          } else {
+            console.log("Insert operation did not insert any rows.");
+            console.log({ "status": "OK", "message": "Insert operation did not insert any rows.", "inserted": false });
+          }
+        })
+        .catch((error) => {
+          console.error("Error executing insert query:", error);
+          console.log({ "status": "OK", "message": "Error executing insert query", "inserted": false  });
+        });
+    } else {
+      console.log(`Cycle '${nameCycle}' not found`);
+      console.log({ "status": "Error", "message": `Cycle '${nameCycle}' not found`, "inserted": false  });
+    }
+  } catch (e) {
+    console.log("ERROR: " + e.stack)
+    console.log({ "status": "Error", "message": "Error in the function to add the record", "inserted": false  });
+  }
+}
+
+
 
 /* Conseguir los records o registros, el post le especificara */
 app.post('/api/get_ranking', getRanking)
