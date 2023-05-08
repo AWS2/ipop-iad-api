@@ -131,9 +131,12 @@ async function getRanking (req, res) {
     let end = receivedPost.end;
     var results = await queryDatabase("SELECT * FROM ranking WHERE idRanking BETWEEN " + start +  " AND " + end + " ORDER BY points ASC;")    
     if(results.length > 0){
+      console.log("The ranking is:"+JSON.stringify(results));
       res.end(JSON.stringify({"status":"OK","message":results}));
+      // console.log("The answer is: "+JSON.stringify(res));
     }else{
       res.end(JSON.stringify({"status":"Error","message": results}));
+      // console.log("The answer is: "+res);
     }
     
   }catch(e){
@@ -174,10 +177,10 @@ async function hide_ranking (req, res) {
   let receivedPost = await post.getPostObject(req);
   try{
     let idRanking = receivedPost.idRanking;
-    let isVisible = receivedPost.visibility;
+    let isVisible = receivedPost.isVisible;
     console.log(isVisible)
     if (isVisible === true) {
-      console.log("UPDATE ranking SET isVisible = false WHERE idRanking = " + idRanking + ";")
+      console.log("UPDATE ranking SET isVisible = true WHERE idRanking = " + idRanking + ";")
       await queryDatabase("UPDATE ranking SET isVisible = true WHERE idRanking = " + idRanking + ";")    
     } else {
       console.log("UPDATE ranking SET isVisible = false WHERE idRanking = " + idRanking + ";")
@@ -230,6 +233,11 @@ wss.on('connection', (ws, req) => {
     let idClientDisconnected = metadata.id
     console.log("Client disconnected: "+idClientDisconnected);
     removePlayer(idClientDisconnected);
+    saveDisconnection(idClientDisconnected);
+    if (listPlayersConnected.length == 0) {
+      listTotemsMultiplayer = [];
+      stopLoop();
+    }
   })
 
   // What to do when a client message is received
@@ -518,7 +526,18 @@ function gameLoop(){
 async function saveConnection(IP, id) {
   try {
     const date = getDate();
-    await queryDatabase(`INSERT INTO connections (IP, id, date) VALUES ('${IP}', '${id}', '${date}')`);
+    await queryDatabase(`INSERT INTO connections (IP, id, timeConnection) VALUES ('${IP}', '${id}', '${date}')`);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/* Para guardar una desconexion en BBDD, basicamente establece para una conexión
+dada su hora de desconexión */
+async function saveDisconnection(id) {
+  try {
+    const date = getDate();
+    await queryDatabase(`UPDATE connections SET timeDisconnection = ${date} WHERE id = '${id}'`);
   } catch (error) {
     console.error(error);
   }

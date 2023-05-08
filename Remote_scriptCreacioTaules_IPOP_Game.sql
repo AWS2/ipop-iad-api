@@ -48,8 +48,9 @@ CREATE TABLE ocupation(
 CREATE TABLE connections(
 	idConnection INTEGER NOT NULL AUTO_INCREMENT,
     ip VARCHAR(255),
-    timeConnextion DATETIME,
     uuidv4 VARCHAR(255),
+    timeConnection DATETIME,
+    timeDisconnection DATETIME,
     PRIMARY KEY(idConnection)
 );
 
