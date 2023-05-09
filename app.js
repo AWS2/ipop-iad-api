@@ -35,6 +35,7 @@ let currentModelScene = new modelScene.modelScene(1000, 1000);
 /* Para guardar en RAM los usuarios conectados */
 let listPlayersConnected = [];
 let listTotemsMultiplayer = [];
+let idTotemAvailable = 0;
 
 // Wait 'ms' milliseconds
 function wait (ms) {
@@ -75,11 +76,12 @@ function appListen () {
   // showRankingTest();
   // showCyclesTest();
   // printRandomTotemsList(3, 10, 75, 25);
-  console.log("creating test players and his totems: \n");
+  // console.log("creating test players and his totems: \n");
   addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
   addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
   recalculateTotems();
   console.log("List of players connected:"+ listPlayersConnected);
+  console.log("List of totems:"+ listTotemsMultiplayer);
   // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
   // testSetRanking(jsonRanking);
 
@@ -316,6 +318,7 @@ wss.on('connection', (ws, req) => {
   // What to do when a client message is received
   ws.on('message', (bufferedMessage) => {
     // console.log("Message received from client: " + bufferedMessage)
+    let rst;
 
     var messageAsString = bufferedMessage.toString()
     var messageAsObject = {}
@@ -400,7 +403,8 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
       let tries = 0;
 
       while (!totem && tries < maxTries) {
-        totem = await generateTotem(idCycle, totemWidth, totemHeight);
+        idTotemAvailable++;
+        totem = await generateTotem(idTotemAvailable, idCycle, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -427,7 +431,8 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
 
       while (!totem && tries < maxTries) {
         const randomCycleId = otherCycles[Math.floor(Math.random() * otherCycles.length)];
-        totem = await generateTotem(randomCycleId, totemWidth, totemHeight);
+        idTotemAvailable++;
+        totem = await generateTotem(idTotemAvailable, randomCycleId, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -486,6 +491,7 @@ function isOverlappingUnsuitableZone(totem, unsuitableZones) {
 }
 
 async function recalculateTotems() {
+  idTotemAvailable = 0;
   this.listTotemsMultiplayer = [];
   let sceneGameWidth = currentModelScene.sceneGameWidth;
   let sceneGameHeight = currentModelScene.sceneGameHeight;
@@ -518,7 +524,7 @@ async function recalculateTotems() {
 
 /* Esta funcion nos crea un totem con la descripcion 
 sin las letras tipo a), b), c) etc delante ni espacios vacios por delante o detras */
-async function generateTotem(idCycle, totemWidth, totemHeight) {
+async function generateTotem(idTotem, idCycle, totemWidth, totemHeight) {
   const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
   const nameCycle = cycles[0].nameCycle;
   const sceneGameWidth = currentModelScene.sceneGameWidth;
@@ -534,7 +540,7 @@ async function generateTotem(idCycle, totemWidth, totemHeight) {
   let posX = Math.floor(Math.random() * (sceneGameWidth - totemWidth));
   let posY = Math.floor(Math.random() * (sceneGameHeight - totemHeight));
 
-  return new totem(descriptionOcupation, nameCycle, posX, posY, totemWidth, totemHeight);
+  return new totem(idTotem, descriptionOcupation, nameCycle, posX, posY, totemWidth, totemHeight);
 }
 
 
@@ -597,9 +603,10 @@ function gameLoop(){
 
 /* Para guardar una conexion en BBDD */
 async function saveConnection(IP, id) {
+  console.log("saveConnection");
   try {
     const date = getDate();
-    await queryDatabase(`INSERT INTO connections (IP, id, timeConnection) VALUES ('${IP}', '${id}', '${date}')`);
+    await queryDatabase(`INSERT INTO connections (IP, uuidv4, timeConnection) VALUES ('${IP}', '${id}', '${date}')`);
   } catch (error) {
     console.error(error);
   }
@@ -608,9 +615,10 @@ async function saveConnection(IP, id) {
 /* Para guardar una desconexion en BBDD, basicamente establece para una conexión
 dada su hora de desconexión */
 async function saveDisconnection(id) {
+  console.log("saveDisconnection");
   try {
     const date = getDate();
-    await queryDatabase(`UPDATE connections SET timeDisconnection = ${date} WHERE id = '${id}'`);
+    await queryDatabase(`UPDATE connections SET timeDisconnection = ${date} WHERE uuidv4 = '${id}'`);
   } catch (error) {
     console.error(error);
   }
@@ -666,7 +674,7 @@ async function printRandomTotemsList(idCycle, numberOfTotems, totemWidth, totemH
   const totemsList = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight);
   console.log("Totems list:");
   totemsList.forEach((totem) => {
-    console.log(`${totem.text}, ${totem.cycleLabel}, (${totem.posX}, ${totem.posY}), (${totem.width}, ${totem.height})`);
+    console.log(`${totem.idTotem}, ${totem.text}, ${totem.cycleLabel}, (${totem.posX}, ${totem.posY}), (${totem.width}, ${totem.height})`);
   });
 }
 

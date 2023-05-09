@@ -7,7 +7,8 @@ por un lado posicion X e Y  en un mapa de momento asumiendo que es Rectangular
 y el tamaño, asumiendo también una forma rectangular para el totem*/
 
 class totem {
-    constructor(text, cycleLabel, posX, posY, widthX, heightY) {
+    constructor(idTotem, text, cycleLabel, posX, posY, widthX, heightY) {
+      this.idTotem = idTotem;
       this.text = text;
       this.cycleLabel = cycleLabel;
       this.posX = posX;
@@ -17,7 +18,7 @@ class totem {
     }
 
     toString() {
-      return `Text: ${this.text}, Cycle Label: ${this.cycleLabel}, Pos X: ${this.posX}, Pos Y: ${this.posY}, Width: ${this.width}, Height: ${this.height}`;
+      return `IdTotem: ${this.idTotem} Text: ${this.text}, Cycle Label: ${this.cycleLabel}, Pos X: ${this.posX}, Pos Y: ${this.posY}, Width: ${this.width}, Height: ${this.height}`;
     }
   }
 
