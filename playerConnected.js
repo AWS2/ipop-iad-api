@@ -1,20 +1,30 @@
-/* Clase para guardar usuarios en RAM, 
-name y cycle los enviara el ws en la conexión (Cuando se conecta alguien al juego es porque
+/* Clase para guardar usuarios en RAM con la info que se hara broadcast, 
+alias y cycle los enviara el ws en la conexión (Cuando se conecta alguien al juego es porque
 ha elegido ciclo, se ha puesto nombre y le da ajugar) la IP es un requisito que nos especificaron
 
 el uuidv4 es un codigo unico de conexión y permitira associar el player con la conexión ws
+
+alias, spriteSelectes, posX y posY se hacen broadcast
  */
 
 class playerConnected{
-    constructor(name, cycle, IP, uuidv4){
-        this.name = name;
+    constructor(alias, spriteSelected, posX, posY, cycle, IP, uuidv4,){
+        this.alias = alias;
+        this.spriteSelected = spriteSelected;
+        this.posX = posX;
+        this.posY = posY;
         this.cycle = cycle;
         this.IP = IP;
         this.uuidv4 = uuidv4;
     }
 
+    updatePositions(newPosX, newPosY){
+        this.posX = newPosX;
+        this.posY = newPosY;
+    }
+
     toString() {
-        return `Name: ${this.name}, Cycle: ${this.cycle}, IP: ${this.IP}, UUIDv4: ${this.uuidv4}`;
+        return `alias: ${this.alias}, spriteSlected: ${this.spriteSelected}, posX: ${this.posX}, posY: ${this.posY} Cycle: ${this.cycle}, IP: ${this.IP}, UUIDv4: ${this.uuidv4}`;
       }
 }
 

@@ -193,8 +193,6 @@ async function testSetRanking(jsonPost) {
   }
 }
 
-
-
 /* Conseguir los records o registros, el post le especificara */
 app.post('/api/get_ranking', getRanking)
 async function getRanking (req, res) {
@@ -343,7 +341,24 @@ wss.on('connection', (ws, req) => {
     /* Segun el parametro type (u otro que mandemos en el ws) podremos activar un codigo u otro
     aqui podria ir el codigo de que hacer cuando un usuario se conecta e indica que quiere jugar*/
     if(messageAsObject.type == "startGame"){
-      
+
+      /* Le pasamos nombre del ciclo, buscara la id, cuantos totems generamos y su ancho y alto */
+      let idCycle = getIdCycle(messageAsObject.nameCycle);
+      let numberOfTotems = messageAsObject.numberOfTotems;
+      let totemWidth = messageAsObject.totemWidth;
+      let totemHeight = messageAsObject.totemHeight;
+
+      generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight);
+    }
+
+    /* El mensaje para indicar que se ha recogido un totem, se pasara la id de totem
+    y el server lo elimina de la lista */
+    if(messageAsObject == "tokenRetrieved"){
+      let idTotem = messageAsObject.idTotem;
+      if(removeTotem(idTotem)){
+        const rst = { type: "TotemRemoved", totem: idTotem };
+        broadcast(rst);
+      }
     }
 
     /* Este podria ser el mensaje del WebSocket para indicar que un usuario quiere dejar de jugar 
@@ -353,7 +368,15 @@ wss.on('connection', (ws, req) => {
 
     /* Aqui se deben recoger y tratar los datos que envie cada cliente respecto a su movimiento */
     if(messageAsObject.type == "movementInfo"){
-      }
+      let posX = messageAsObject.posX;
+      let posY = messageAsObject.posY;
+
+      // let { posX, posY } = messageAsObject.positions;
+
+      let idPlayerToUpdate = metadata.id;
+      let playerToUpdate = listPlayersConnected.find((player) => player.uuidv4 === id);
+      playerToUpdate.updatePositions(posX, posY);
+    }
 
     // console.log("Will respond " +JSON.stringify(rst));
     ws.send(JSON.stringify(rst));
@@ -388,13 +411,13 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
   const totems = [];
   const maxTries = 10;
 
-  if (modelScene) {
-    this.currentModelScene = modelScene;
+  if (modelScene == null) {
+    modelScene = this.currentModelScene;
   }
 
-  let sceneGameWidth = currentModelScene.sceneGameWidth;
-  let sceneGameHeight = currentModelScene.sceneGameHeight;
-  let unsuitableZones = currentModelScene.unsuitableZones;
+  let sceneGameWidth = modelScene.sceneGameWidth;
+  let sceneGameHeight = modelScene.sceneGameHeight;
+  let unsuitableZones = modelScene.unsuitableZones;
 
   /* Parte que nos genera los totems del ciclo */
   try {
@@ -490,12 +513,17 @@ function isOverlappingUnsuitableZone(totem, unsuitableZones) {
   return false;
 }
 
-async function recalculateTotems() {
+async function recalculateTotems(modelScene = null) {
+
+  if (modelScene == null) {
+    modelScene = this.currentModelScene;
+  }
+
   idTotemAvailable = 0;
   this.listTotemsMultiplayer = [];
-  let sceneGameWidth = currentModelScene.sceneGameWidth;
-  let sceneGameHeight = currentModelScene.sceneGameHeight;
-  let unsuitableZones = currentModelScene.unsuitableZones;
+  let sceneGameWidth = modelScene.sceneGameWidth;
+  let sceneGameHeight = modelScene.sceneGameHeight;
+  let unsuitableZones = modelScene.unsuitableZones;
 
   // loop through every player and generate totems for their cycle
   for (let i = 0; i < listPlayersConnected.length; i++) {
@@ -520,15 +548,18 @@ async function recalculateTotems() {
   await broadcast(rst);
 }
 
-
-
 /* Esta funcion nos crea un totem con la descripcion 
 sin las letras tipo a), b), c) etc delante ni espacios vacios por delante o detras */
-async function generateTotem(idTotem, idCycle, totemWidth, totemHeight) {
+async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelScene = null) {
   const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
   const nameCycle = cycles[0].nameCycle;
-  const sceneGameWidth = currentModelScene.sceneGameWidth;
-  const sceneGameHeight = currentModelScene.sceneGameHeight;
+
+  if (modelScene == null) {
+    modelScene = this.currentModelScene;
+  }
+
+  const sceneGameWidth = modelScene.sceneGameWidth;
+  const sceneGameHeight = modelScene.sceneGameHeight;
 
   const occupations = await queryDatabase(`SELECT * FROM ocupation WHERE cycle_idCycle=${idCycle} ORDER BY RAND() LIMIT 1`);
   let descriptionOcupation = occupations[0].descriptionOcupation;
@@ -544,13 +575,14 @@ async function generateTotem(idTotem, idCycle, totemWidth, totemHeight) {
 }
 
 
-/* Funcion para establecer el el escenario o mapa de juego, con un ancho y alto
-y la posibilidad de añadir areas donde no de pueden generar totems */
+/* Funcion para establecer el escenario o mapa de juego, con un ancho y alto
+y la posibilidad de añadir areas donde no se pueden generar totems */
 function setModelScene(sceneGameWidth, sceneGameHeight, unsuitableZones = []) {
   const unsuitableZonesValidated = unsuitableZones.filter((zone) => zone instanceof UnsuitableZone);
   const model = new modelScene(sceneGameWidth, sceneGameHeight);
   model.unsuitableZones = unsuitableZonesValidated;
-  currentModelScene = model;
+  this.currentModelScene = model;
+  return model;
 }
 
 function getDate(){
@@ -592,6 +624,18 @@ function gameLoop(){
 
       // Cridar aquí la funció que fa un broadcast amb les dades del joc a tots els clients
       var gameInfo = {};
+      for (let i = 0; i < listPlayersConnected.length; i++) {
+        let player = listPlayersConnected[i];
+        let playerInfo = {
+          name: player.alias,
+          spriteSelected: player.spriteSelected,
+          posX: player.posX,
+          posY: player.posY,
+          uuidv4: player.uuidv4,
+        };
+        gameInfo.players.push(playerInfo);
+      }
+      console.log("This info will be broadcasted: "+ rst)
       var rst = { type: "gameInfoBroadcast", gameInfo: gameInfo };
       broadcast(rst)
   }
@@ -625,15 +669,27 @@ async function saveDisconnection(id) {
 }
 
 /* Añadir un usuario a la lista temporal */
-function addPlayer(name, cycle, IP, uuidv4) {
-  const newPlayer = new playerConnected(name, cycle, IP, uuidv4);
+function addPlayer(name, spriteSelected, posX, posY, cycle, IP, uuidv4) {
+  const newPlayer = new playerConnected(name, spriteSelected, posX, posY, cycle, IP, uuidv4);
   listPlayersConnected.push(newPlayer);
 }
 
-/* Eliminar un usuario de la lista temporal */
+/* Eliminar un usuario de la lista temporal*/
 function removePlayer(uuidv4) {
   listPlayersConnected = listPlayersConnected.filter((player) => player.uuidv4 !== uuidv4);
 }
+
+function removeTotem(idTotem){
+  const index = totems.findIndex((totem) => totem.idTotem === idTotem);
+  let removed = false;
+  
+  if (index !== -1) {
+    totems.splice(index, 1);
+    removed = true;
+  }
+  return removed;
+}
+
 
 /* Para guardar un usuario en RAM, en un array y para quitarlo cuando se desconecte */
 
@@ -650,6 +706,12 @@ function stopLoop(){
 /* 
 *** OTRAS FUNCIONES COMPLEMENTARIAS y de TESTEO***
  */
+
+async function getIdCycle(nameCycle){
+  const cycles = await queryDatabase("SELECT * FROM cycle WHERE nameCycle = '" + nameCycle+ "'");
+  const cycleId = cycles[0].idCycle;
+  return cycleId;
+}
 
 async function showRankingTest(){
   console.log("showRankingTest");
@@ -694,7 +756,7 @@ function queryDatabase (query) {
       host: process.env.MYSQLHOST || "localhost",
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "localhost",
+      password: process.env.MYSQLPASSWORD || "p@ssw0rd",
       database: process.env.MYSQLDATABASE || "ipop_game"
     });
 
@@ -704,19 +766,5 @@ function queryDatabase (query) {
     });
      
     connection.end();
-  })
-}
-
-/* En algunos metodos que llaman varias veces al metodo queryDatabase me he encontrado problemas
-que parecen estar causados por el hecho de que la conexión se abre y cierra varias veces,
-
-he creado este metodo alternativo donde antes de llamarlo se crea la conexion y se le pasa como parametro,
-de esta forma solo hace query con la conexion dada, pero no la abre ni cierra */
-function queryDatabaseConnection(connection, query){
-  return new Promise((resolve, reject) => {
-    connection.query(query, (error, results) => { 
-      if (error) reject(error);
-      resolve(results)
-    });
   })
 }
