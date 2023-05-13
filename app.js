@@ -80,7 +80,7 @@ function appListen () {
   // console.log("creating test players and his totems: \n");
   // addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
   // addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
-  totemsUtils.recalculateTotems();
+  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
   console.log("List of players connected:"+ listPlayersConnected);
   console.log("List of totems:"+ listTotemsMultiplayer);
   // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
@@ -230,7 +230,7 @@ async function getTotemsList (req, res) {
     let numberOfTotems = receivedPost.numberOfTotems;
     let totemWidth = receivedPost.totemWidth;
     let totemHeight = receivedPost.totemHeight;
-    var results = await totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
+    var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene, idTotemAvailable);
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
     }else{
@@ -352,7 +352,7 @@ wss.on('connection', (ws, req) => {
       let totemWidth = messageAsObject.totemWidth;
       let totemHeight = messageAsObject.totemHeight;
 
-      totemsGenerated = totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
+      totemsGenerated = generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
 
       totemsGenerated.forEach((t) => {
         let newTotem = new totem(t.idTotem, t.text, t.cycleLabel, t.posX, t.posY, t.width, t.height);
@@ -448,7 +448,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
 
       while (!totem && tries < maxTries) {
         idTotemAvailable++;
-        totem = await totemsUtils.generateTotem(idTotemAvailable, idCycle, totemWidth, totemHeight);
+        totem = await generateTotem(idTotemAvailable, idCycle, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -476,7 +476,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
       while (!totem && tries < maxTries) {
         const randomCycleId = otherCycles[Math.floor(Math.random() * otherCycles.length)];
         idTotemAvailable++;
-        totem = await totemsUtils.generateTotem(idTotemAvailable, randomCycleId, totemWidth, totemHeight);
+        totem = await generateTotem(idTotemAvailable, randomCycleId, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -555,7 +555,7 @@ async function recalculateTotems(modelScene = null) {
     const cycleId = cycles[0].idCycle;
 
     // generate totems for the cycle and add them to the multiplayer list
-    const totems = await totemsUtils.generateTotemsList(cycleId, 5, 75, 25, modelScene);
+    const totems = await generateTotemsList(cycleId, 5, 75, 25, currentModelScene);
     totems.forEach((totem) => {
       if (!listTotemsMultiplayer.some(t => overlap(t, totem) || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones))) {
         listTotemsMultiplayer.push(totem);
@@ -579,8 +579,8 @@ async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelSce
     modelScene = this.currentModelScene;
   }
 
-  const sceneGameWidth = modelScene.sceneGameWidth;
-  const sceneGameHeight = modelScene.sceneGameHeight;
+  const sceneGameWidth = currentModelScene.sceneGameWidth;
+  const sceneGameHeight = currentModelScene.sceneGameHeight;
 
   const occupations = await queryDatabase(`SELECT * FROM ocupation WHERE cycle_idCycle=${idCycle} ORDER BY RAND() LIMIT 1`);
   let descriptionOcupation = occupations[0].descriptionOcupation;
@@ -775,7 +775,7 @@ async function showCyclesTest(){
 
 async function printRandomTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight) {
   console.log("printRandomTotemsList");
-  const totemsList = await totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
+  const totemsList = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
   console.log("Totems list:");
   totemsList.forEach((totem) => {
     console.log(`${totem.idTotem}, ${totem.text}, ${totem.cycleLabel}, (${totem.posX}, ${totem.posY}), (${totem.width}, ${totem.height})`);
@@ -790,7 +790,7 @@ function queryDatabase (query) {
       host: process.env.MYSQLHOST || "localhost",
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "p@ssw0rd",
+      password: process.env.MYSQLPASSWORD || "localhost",
       database: process.env.MYSQLDATABASE || "ipop_game"
     });
 

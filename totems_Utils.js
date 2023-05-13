@@ -41,7 +41,7 @@ las medidas del escenario donde se generan los totems, si se piden mas totems de
 tries y maxTries cuentan los intentos de generar un totem, devolvera una lista con menos totems de los que se han pedido
 
 Esta funcion esta pensada tanto para que un cliente en modo un jugador pida una lista de totems como para generarlos*/
-async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene) {
+async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene, idTotemAvailable) {
     const totems = [];
     const maxTries = 10;
   
@@ -143,7 +143,7 @@ function overlap(t1, t2) {
     return false;
   }
 
-  async function recalculateTotems(modelScene, listTotemsMultiplayer) {
+  async function recalculateTotems(modelScene, listTotemsMultiplayer, listPlayersConnected) {
 
     idTotemAvailable = 0;
     listTotemsMultiplayer = [];
