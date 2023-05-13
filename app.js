@@ -52,15 +52,12 @@ const port = process.env.PORT || 3001
 // Publish static files from 'public' folder
 //app.use(express.static('public'))
 
-/* 
-*** SERVERS WSS Y HTTP ***
+/* *** SERVERS WSS Y HTTP ***
  */
 
-/* 
-*** FUNCIONALIDADES DE SERVER HTTP ***
+/* *** FUNCIONALIDADES DE SERVER HTTP ***
 */
 
- 
 // Activate HTTP server
 /* Por costumbre suelo hacer funciones y prints de testeo para probar funciones del server */
 const httpServer = app.listen(port, appListen)
@@ -77,12 +74,18 @@ function appListen () {
   // showRankingTest();
   // showCyclesTest();
   // printRandomTotemsList(3, 10, 75, 25);
+
   // console.log("creating test players and his totems: \n");
-  // addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
-  // addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
-  // recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
+  addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
+  addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
+  addPlayer("player3", 1, 250, 200, "Administració i finances",  uuidv4());
   // console.log("List of players connected:"+ listPlayersConnected);
-  // console.log("List of totems:"+ listTotemsMultiplayer);
+
+  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
+  // idTotemAvailable= recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
+
+  console.log("List of totems:"+ listTotemsMultiplayer);
+
   // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
   // testSetRanking(jsonRanking);
 
@@ -226,17 +229,17 @@ async function getTotemsList (req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.getPostObject(req);
   try{
-    let idCycle = receivedPost.idCycle || 1;
-    let numberOfTotems = receivedPost.numberOfTotems || 5;
-    let totemWidth = receivedPost.totemWidth || 75;
-    let totemHeight = receivedPost.totemHeight || 25;
-    var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene, idTotemAvailable);
-    var jsonTotems = formatTotemsList(results);
-    console.log("The answer will be:"+JSON.stringify(jsonTotems));
+    // let idCycle = receivedPost.idCycle;
+    // let numberOfTotems = receivedPost.numberOfTotems;
+    // let totemWidth = receivedPost.totemWidth;
+    // let totemHeight = receivedPost.totemHeight;
+    // var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene, idTotemAvailable);
+    var results = formatTotemsList(listTotemsMultiplayer);
+    console.log("The answer will be:"+JSON.stringify(results));
     if(results.length > 0){
-      res.end(JSON.stringify({"status":"OK", "type":"game_totems", "message":jsonTotems}));
+      res.end(JSON.stringify({"status":"OK", "type":"game_totems", "message":results}));
     }else{
-      res.end(JSON.stringify({"status":"OK", "type":"game_totems","message": jsonTotems}));
+      res.end(JSON.stringify({"status":"OK", "type":"game_totems","message":results}));
     }
   }catch(e){
     console.log("ERROR: " + e.stack)
@@ -267,8 +270,7 @@ async function hide_ranking (req, res) {
   }
 }
 
-/* 
-*** FUNCIONALIDADES DE SERVER WS ***
+/* *** FUNCIONALIDADES DE SERVER WS ***
 */
 // Run WebSocket server
 const WebSocket = require('ws')
@@ -417,8 +419,7 @@ async function broadcast (obj) {
   })
 }
 
-/* 
-*** FUNCIONES PARA LA LOGICA DEL JUEGO ***
+/* *** FUNCIONES PARA LA LOGICA DEL JUEGO ***
 */
 
 /* Funcion para generar totems, el server tiene almacenado el ancho y alto del escenario 
@@ -536,7 +537,7 @@ function isOverlappingUnsuitableZone(totem, unsuitableZones) {
   return false;
 }
 
-async function recalculateTotems(modelScene = null) {
+async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listPlayersConnected) {
 
   if (modelScene == null) {
     modelScene = this.currentModelScene;
@@ -549,20 +550,23 @@ async function recalculateTotems(modelScene = null) {
   let unsuitableZones = modelScene.unsuitableZones;
 
   // loop through every player and generate totems for their cycle
-  for (let i = 0; i < listPlayersConnected.length; i++) {
-    let player = listPlayersConnected[i];
+  if (listPlayersConnected.length > 0){
+    for (let i = 0; i < listPlayersConnected.length; i++) {
+      let player = listPlayersConnected[i];
 
-    // get cycleId from the cycle name
-    const cycles = await queryDatabase("SELECT * FROM cycle WHERE nameCycle = '" + player.cycle + "'");
-    const cycleId = cycles[0].idCycle;
+      // get cycleId from the cycle name
+      console.log("The player cycle is: ", player.cycle);
+      const cycles = await queryDatabase("SELECT * FROM cycle WHERE nameCycle = '" + player.cycle + "'");
+      const cycleId = cycles[0].idCycle;
 
-    // generate totems for the cycle and add them to the multiplayer list
-    const totems = await generateTotemsList(cycleId, 5, 75, 25, currentModelScene);
-    totems.forEach((totem) => {
-      if (!listTotemsMultiplayer.some(t => overlap(t, totem) || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones))) {
-        listTotemsMultiplayer.push(totem);
-      }
-    });
+      // generate totems for the cycle and add them to the multiplayer list
+      const totems = await generateTotemsList(cycleId, 5, 75, 25, currentModelScene);
+      totems.forEach((totem) => {
+        if (!listTotemsMultiplayer.some(t => overlap(t, totem) || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones))) {
+          listTotemsMultiplayer.push(totem);
+        }
+      });
+    }
   }
 
   // send the list of totems to all clients
@@ -765,8 +769,7 @@ function stopLoop(){
   console.log("Stopped game execution at " + timeEndMatch);
 }
 
-/* 
-*** OTRAS FUNCIONES COMPLEMENTARIAS y de TESTEO***
+/* *** OTRAS FUNCIONES COMPLEMENTARIAS y de TESTEO***
  */
 
 async function getIdCycle(nameCycle){

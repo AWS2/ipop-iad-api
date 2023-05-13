@@ -8,13 +8,9 @@ const { response } = require('express')
 const { stat } = require('fs')
 const totem = require('./totem.js')
 
-async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelScene = null) {
+async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelScene) {
     const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
     const nameCycle = cycles[0].nameCycle;
-  
-    if (modelScene == null) {
-      modelScene = this.currentModelScene;
-    }
   
     const sceneGameWidth = modelScene.sceneGameWidth;
     const sceneGameHeight = modelScene.sceneGameHeight;
@@ -102,7 +98,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
         }
       }
   
-      return totems;
+      return {"totems":totems, "idTotemAvailable":idTotemAvailable};
   
     } catch (error) {
       console.error(error);
@@ -111,7 +107,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
   }
 
   /* Tres funciones basicas para comprobar que los totems no se solapen
-ni consigo mismo ni con zonas no aptas ni esten parcialmente fuera del escenario */
+ni consigo mismo, ni con zonas no aptas, ni esten parcialmente fuera del escenario */
 
 function overlap(t1, t2) {
     return (
@@ -143,6 +139,7 @@ function overlap(t1, t2) {
     return false;
   }
 
+  /* Funcion pensada para generar un conjunto de totems para una partida con varios jugadores, empezando de 0 */
   async function recalculateTotems(modelScene, listTotemsMultiplayer, listPlayersConnected) {
 
     idTotemAvailable = 0;
@@ -172,6 +169,8 @@ function overlap(t1, t2) {
     console.log("The totems for multiplayer are: ", listTotemsMultiplayer);
     const rst = { type: "SendTotemsMultiplayer", totems: listTotemsMultiplayer };
     await broadcast(rst);
+
+    return idTotemAvailable;
   }
 
   // Perform a query to the database
@@ -195,11 +194,33 @@ function queryDatabase (query) {
     })
   }
 
+  /* Para convertir lista de objetos totem a lo que se pide 
+  en ws type "game_totems" */
+  function formatTotemsList(results) {
+    let jsonTotems = {
+      "totems": []
+    };
+    for (let i = 0; i < results.length; i++) {
+      let totem = results[i];
+      jsonTotems.totems.push({
+        "idTotem": totem.idTotem,
+        "text": totem.text,
+        "cycleLabel": totem.cycleLabel,
+        "posX": totem.posX,
+        "posY": totem.posY,
+        "width": totem.width,
+        "height": totem.height
+      });
+    }
+    return jsonTotems;
+  }
+
   module.exports = {
     generateTotem,
     generateTotemsList,
     overlap,
     isOutOfScene,
     isOverlappingUnsuitableZone,
-    recalculateTotems
+    recalculateTotems,
+    formatTotemsList
   };
