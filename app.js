@@ -9,6 +9,7 @@ const { stat } = require('fs')
 const totem = require('./totem.js')
 const playerConnected = require('./playerConnected.js');
 const modelScene = require('./modelSceneClasses.js');
+const totemsUtils = require('./totems_Utils.js');
 
 
 /* La idea de esta variable es diferenciar entre primer cliente que se conecta con ws, segundo que se conecta, etc
@@ -75,11 +76,11 @@ function appListen () {
   console.log("\n__TESTS__");
   // showRankingTest();
   // showCyclesTest();
-  // printRandomTotemsList(3, 10, 75, 25);
+  printRandomTotemsList(3, 10, 75, 25);
   // console.log("creating test players and his totems: \n");
-  //addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
-  //addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
-  recalculateTotems();
+  // addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
+  // addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
+  totemsUtils.recalculateTotems();
   console.log("List of players connected:"+ listPlayersConnected);
   console.log("List of totems:"+ listTotemsMultiplayer);
   // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
@@ -229,7 +230,7 @@ async function getTotemsList (req, res) {
     let numberOfTotems = receivedPost.numberOfTotems;
     let totemWidth = receivedPost.totemWidth;
     let totemHeight = receivedPost.totemHeight;
-    var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight);
+    var results = await totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK","message":results}));
     }else{
@@ -240,7 +241,6 @@ async function getTotemsList (req, res) {
     res.end(JSON.stringify({"status":"Error","message":"Error generating the totems"}));
   }
 }
-
 
 /* Conseguir los records o registros, el post le especificara */
 app.post('/api/hide_ranking', hide_ranking)
@@ -307,6 +307,9 @@ wss.on('connection', (ws, req) => {
     console.log("Client disconnected: "+idClientDisconnected);
     removePlayer(idClientDisconnected);
     saveDisconnection(idClientDisconnected);
+
+    /* Si esa desconexion es la del ultimo jugador, 
+    reinicia lista totems y detiene el juego, incluyendo el broadcast */
     if (listPlayersConnected.length == 0) {
       listTotemsMultiplayer = [];
       stopLoop();
@@ -327,33 +330,47 @@ wss.on('connection', (ws, req) => {
     /* Justo despues de conectarse el usuario envia nombre y ciclo, lo idoneo seria que enviara esa info por el req, pero si no funciona
     que se recojan name y cycle por aqui y se recuperen IP e id a ese ws y se guarde el ususario
     
-    Guardar el usuario tambien se podria hacer en startGame*/
-    if(messageAsObject.type == "sendInfoPlayer"){
-      const cycle = messageAsObject.cycle;
-      const name = messageAsObject.name;
-
-      const metadata = socketsClients.get(ws);
-      const IP = metadata.IP;
-      const id = metadata.id;
-      addPlayer(name, cycle, IP, id);
-    }
-
     /* Segun el parametro type (u otro que mandemos en el ws) podremos activar un codigo u otro
     aqui podria ir el codigo de que hacer cuando un usuario se conecta e indica que quiere jugar*/
     if(messageAsObject.type == "startGame"){
 
+      const nameCycle = messageAsObject.nameCycle;
+      const alias = messageAsObject.alias;
+      const spriteSelected = messageAsObject.spriteSelected;
+      const posX = messageAsObject.posX;
+      const posY = messageAsObject.posY;
+
+      const metadata = socketsClients.get(ws);
+      const id = metadata.id;
+      
+      /* Este jugador que empieza, lo añadimos a la lista de jugadores listPlayersConnected */
+      addPlayer(alias, spriteSelected, posX, posY, nameCycle, id);
+
       /* Le pasamos nombre del ciclo, buscara la id, cuantos totems generamos y su ancho y alto */
-      let idCycle = getIdCycle(messageAsObject.nameCycle);
+      let idCycle = getIdCycle(nameCycle);
       let numberOfTotems = messageAsObject.numberOfTotems;
       let totemWidth = messageAsObject.totemWidth;
       let totemHeight = messageAsObject.totemHeight;
 
-      generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight);
+      totemsGenerated = totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
+
+      totemsGenerated.forEach((t) => {
+        let newTotem = new totem(t.idTotem, t.text, t.cycleLabel, t.posX, t.posY, t.width, t.height);
+        this.listTotemsMultiplayer.push(newTotem);
+      });
+
+      /* Si el juego no esta corriendo es porque o bien acabamos de empezar servidor o se ha desconectado
+      el ultimo websocket o todos los jugadores han parado el juego y se ha parado el bucle, asi que ahora que tenemos una señal de empezar
+      el juego, lo iniciamos */
+      if(gameRunning == false){
+        startGame();
+      }
+
     }
 
     /* El mensaje para indicar que se ha recogido un totem, se pasara la id de totem
     y el server lo elimina de la lista */
-    if(messageAsObject == "tokenRetrieved"){
+    if(messageAsObject.type == "tokenRetrieved"){
       let idTotem = messageAsObject.idTotem;
       if(removeTotem(idTotem)){
         const rst = { type: "TotemRemoved", totem: idTotem };
@@ -363,13 +380,17 @@ wss.on('connection', (ws, req) => {
 
     /* Este podria ser el mensaje del WebSocket para indicar que un usuario quiere dejar de jugar 
     Empezar a jugar y o dejar de jugar podrian ser tratados tambien con http*/
-    if(messageAsObject.type == "stopGame"){
+    if(messageAsObject.game_status == "finish"){
+      let playerWon = messageAsObject.player_won;
+      console.log("Player won: "+playerWon);
     }
 
     /* Aqui se deben recoger y tratar los datos que envie cada cliente respecto a su movimiento */
     if(messageAsObject.type == "movementInfo"){
-      let posX = messageAsObject.posX;
-      let posY = messageAsObject.posY;
+      let posX = messageAsObject.player_x;
+      let posY = messageAsObject.player_y;
+      let playerName = messageAsObject.player_alias;
+      let playerSprite = messageAsObject.player_sprite;
 
       // let { posX, posY } = messageAsObject.positions;
 
@@ -427,7 +448,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
 
       while (!totem && tries < maxTries) {
         idTotemAvailable++;
-        totem = await generateTotem(idTotemAvailable, idCycle, totemWidth, totemHeight);
+        totem = await totemsUtils.generateTotem(idTotemAvailable, idCycle, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -455,7 +476,7 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
       while (!totem && tries < maxTries) {
         const randomCycleId = otherCycles[Math.floor(Math.random() * otherCycles.length)];
         idTotemAvailable++;
-        totem = await generateTotem(idTotemAvailable, randomCycleId, totemWidth, totemHeight);
+        totem = await totemsUtils.generateTotem(idTotemAvailable, randomCycleId, totemWidth, totemHeight);
 
         if (totems.some(t => overlap(t, totem) 
         || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones)
@@ -534,7 +555,7 @@ async function recalculateTotems(modelScene = null) {
     const cycleId = cycles[0].idCycle;
 
     // generate totems for the cycle and add them to the multiplayer list
-    const totems = await generateTotemsList(cycleId, 5, 75, 25);
+    const totems = await totemsUtils.generateTotemsList(cycleId, 5, 75, 25, modelScene);
     totems.forEach((totem) => {
       if (!listTotemsMultiplayer.some(t => overlap(t, totem) || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones))) {
         listTotemsMultiplayer.push(totem);
@@ -669,10 +690,31 @@ async function saveDisconnection(id) {
 }
 
 /* Añadir un usuario a la lista temporal */
-function addPlayer(name, spriteSelected, posX, posY, cycle, IP, uuidv4) {
-  const newPlayer = new playerConnected(name, spriteSelected, posX, posY, cycle, IP, uuidv4);
+function addPlayer(name, spriteSelected, posX, posY, cycle, uuidv4) {
+  const newPlayer = new playerConnected(name, spriteSelected, posX, posY, cycle, uuidv4);
   listPlayersConnected.push(newPlayer);
 }
+
+/* Funcion para actualizar datos de un jugador, por ejemplo si hacemos que de una misma
+conexion por websocket, este pueda finalizar partida, permanecer conectado y hacer otra partida
+con otros datos */
+function updatePlayer(name, spriteSelected, posX, posY, cycle, uuidv4) {
+  const playerToUpdate = listPlayersConnected.find(player => player.uuidv4 === uuidv4);
+
+  if (!playerToUpdate) {
+    console.log(`Could not find player with UUID ${uuidv4}`);
+    return;
+  }
+
+  playerToUpdate.alias = name;
+  playerToUpdate.spriteSelected = spriteSelected;
+  playerToUpdate.posX = posX;
+  playerToUpdate.posY = posY;
+  playerToUpdate.cycle = cycle;
+
+  console.log(`Updated player with UUID ${uuidv4}: ${playerToUpdate.toString()}`);
+}
+
 
 /* Eliminar un usuario de la lista temporal*/
 function removePlayer(uuidv4) {
@@ -733,19 +775,11 @@ async function showCyclesTest(){
 
 async function printRandomTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight) {
   console.log("printRandomTotemsList");
-  const totemsList = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight);
+  const totemsList = await totemsUtils.generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene);
   console.log("Totems list:");
   totemsList.forEach((totem) => {
     console.log(`${totem.idTotem}, ${totem.text}, ${totem.cycleLabel}, (${totem.posX}, ${totem.posY}), (${totem.width}, ${totem.height})`);
   });
-}
-
-function isValidNumber(number) {
-  if(typeof number =="number"){
-    return true;
-  }else{
-    return false
-  }
 }
 
 // Perform a query to the database

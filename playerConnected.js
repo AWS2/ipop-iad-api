@@ -8,13 +8,12 @@ alias, spriteSelectes, posX y posY se hacen broadcast
  */
 
 class playerConnected{
-    constructor(alias, spriteSelected, posX, posY, cycle, IP, uuidv4,){
+    constructor(alias, spriteSelected, posX, posY, cycle, uuidv4){
         this.alias = alias;
         this.spriteSelected = spriteSelected;
         this.posX = posX;
         this.posY = posY;
         this.cycle = cycle;
-        this.IP = IP;
         this.uuidv4 = uuidv4;
     }
 
@@ -24,7 +23,7 @@ class playerConnected{
     }
 
     toString() {
-        return `alias: ${this.alias}, spriteSlected: ${this.spriteSelected}, posX: ${this.posX}, posY: ${this.posY} Cycle: ${this.cycle}, IP: ${this.IP}, UUIDv4: ${this.uuidv4}`;
+        return `alias: ${this.alias}, spriteSlected: ${this.spriteSelected}, posX: ${this.posX}, posY: ${this.posY} Cycle: ${this.cycle}, UUIDv4: ${this.uuidv4}`;
       }
 }
 
