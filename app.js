@@ -76,13 +76,13 @@ function appListen () {
   console.log("\n__TESTS__");
   // showRankingTest();
   // showCyclesTest();
-  printRandomTotemsList(3, 10, 75, 25);
+  // printRandomTotemsList(3, 10, 75, 25);
   // console.log("creating test players and his totems: \n");
   // addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
   // addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
-  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
-  console.log("List of players connected:"+ listPlayersConnected);
-  console.log("List of totems:"+ listTotemsMultiplayer);
+  // recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
+  // console.log("List of players connected:"+ listPlayersConnected);
+  // console.log("List of totems:"+ listTotemsMultiplayer);
   // let jsonRanking = {"aliasPlayer":"d","timeStart":"2023-05-08T21:12:23.554991Z","timeEnd":"2023-05-08T21:12:23.573655Z","correctTotems":0,"wrongTotems":0,"nameCycle":"Administració de sistemes informàtics en xarxa - orientat a Ciberseguretat"}
   // testSetRanking(jsonRanking);
 
@@ -220,19 +220,19 @@ async function getRanking (req, res) {
 }
 
 /* A traves de este post, el cliente puede pedir que se generen una serie de totems */
-app.post('/api/generateTotems', getTotemsList)
+app.post('/api/game_totems', getTotemsList)
 async function getTotemsList (req, res) {
   console.log("getTotemsList");
   res.writeHead(200, { 'Content-Type': 'application/json' });
   let receivedPost = await post.getPostObject(req);
   try{
-    let idCycle = receivedPost.idCycle;
-    let numberOfTotems = receivedPost.numberOfTotems;
-    let totemWidth = receivedPost.totemWidth;
-    let totemHeight = receivedPost.totemHeight;
+    let idCycle = receivedPost.idCycle || 1;
+    let numberOfTotems = receivedPost.numberOfTotems || 5;
+    let totemWidth = receivedPost.totemWidth || 75;
+    let totemHeight = receivedPost.totemHeight || 25;
     var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene, idTotemAvailable);
     var jsonTotems = formatTotemsList(results);
-    console.log("The answer will be:"+jsonTotems.toString());
+    console.log("The answer will be:"+JSON.stringify(jsonTotems));
     if(results.length > 0){
       res.end(JSON.stringify({"status":"OK", "type":"game_totems", "message":jsonTotems}));
     }else{
@@ -603,11 +603,10 @@ function formatTotemsList(results) {
   };
   for (let i = 0; i < results.length; i++) {
     let totem = results[i];
-    let cycle = currentModelScene.getCycleById(totem.idCycle);
     jsonTotems.totems.push({
       "idTotem": totem.idTotem,
       "text": totem.text,
-      "cycleLabel": cycle.label,
+      "cycleLabel": totem.cycleLabel,
       "posX": totem.posX,
       "posY": totem.posY,
       "width": totem.width,
@@ -616,8 +615,6 @@ function formatTotemsList(results) {
   }
   return jsonTotems;
 }
-
-
 
 /* Funcion para establecer el escenario o mapa de juego, con un ancho y alto
 y la posibilidad de añadir areas donde no se pueden generar totems */
