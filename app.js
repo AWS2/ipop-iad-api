@@ -77,8 +77,8 @@ function appListen () {
   // showCyclesTest();
   // printRandomTotemsList(3, 10, 75, 25);
   // console.log("creating test players and his totems: \n");
-  addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
-  addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
+  //addPlayer("player1", "Sistemes microinformàtics i xarxes", "127:0:0:1", uuidv4());
+  //addPlayer("player2", "Desenvolupament d’aplicacions multiplataforma", "127:0:0:1", uuidv4());
   recalculateTotems();
   console.log("List of players connected:"+ listPlayersConnected);
   console.log("List of totems:"+ listTotemsMultiplayer);
