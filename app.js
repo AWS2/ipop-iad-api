@@ -231,14 +231,16 @@ async function getTotemsList (req, res) {
     let totemWidth = receivedPost.totemWidth;
     let totemHeight = receivedPost.totemHeight;
     var results = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene, idTotemAvailable);
+    var jsonTotems = formatTotemsList(results);
+    console.log("The answer will be:"+jsonTotems.toString());
     if(results.length > 0){
-      res.end(JSON.stringify({"status":"OK","message":results}));
+      res.end(JSON.stringify({"status":"OK", "type":"game_totems", "message":jsonTotems}));
     }else{
-      res.end(JSON.stringify({"status":"OK","message": results}));
+      res.end(JSON.stringify({"status":"OK", "type":"game_totems","message": jsonTotems}));
     }
   }catch(e){
     console.log("ERROR: " + e.stack)
-    res.end(JSON.stringify({"status":"Error","message":"Error generating the totems"}));
+    res.end(JSON.stringify({"status":"Error", "type":"game_totems","message":"Error generating the totems"}));
   }
 }
 
@@ -594,6 +596,27 @@ async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelSce
 
   return new totem(idTotem, descriptionOcupation, nameCycle, posX, posY, totemWidth, totemHeight);
 }
+
+function formatTotemsList(results) {
+  let jsonTotems = {
+    "totems": []
+  };
+  for (let i = 0; i < results.length; i++) {
+    let totem = results[i];
+    let cycle = currentModelScene.getCycleById(totem.idCycle);
+    jsonTotems.totems.push({
+      "idTotem": totem.idTotem,
+      "text": totem.text,
+      "cycleLabel": cycle.label,
+      "posX": totem.posX,
+      "posY": totem.posY,
+      "width": totem.width,
+      "height": totem.height
+    });
+  }
+  return jsonTotems;
+}
+
 
 
 /* Funcion para establecer el escenario o mapa de juego, con un ancho y alto
