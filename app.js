@@ -76,12 +76,12 @@ function appListen () {
   // printRandomTotemsList(3, 10, 75, 25);
 
   // console.log("creating test players and his totems: \n");
-  addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
-  addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
-  addPlayer("player3", 1, 250, 200, "Administració i finances",  uuidv4());
+  // addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
+  // addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
+  // addPlayer("player3", 1, 250, 200, "Administració i finances",  uuidv4());
   // console.log("List of players connected:"+ listPlayersConnected);
 
-  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
+  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected, 5, 75, 25);
   // idTotemAvailable= recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
 
   console.log("List of totems:"+ listTotemsMultiplayer);
@@ -374,23 +374,29 @@ wss.on('connection', (ws, req) => {
 
     /* El mensaje para indicar que se ha recogido un totem, se pasara la id de totem
     y el server lo elimina de la lista */
-    if(messageAsObject.type == "tokenRetrieved"){
-      let idTotem = messageAsObject.idTotem;
+    if(messageAsObject.totem_id){
+      let idTotem = messageAsObject.totem_id;
       if(removeTotem(idTotem)){
+        console.log("Totem removed: "+idTotem);
         const rst = { type: "TotemRemoved", totem: idTotem };
         broadcast(rst);
       }
     }
 
-    /* Este podria ser el mensaje del WebSocket para indicar que un usuario quiere dejar de jugar 
-    Empezar a jugar y o dejar de jugar podrian ser tratados tambien con http*/
+    /* Mensaje que enviara el cliente que gane, el servidor puede obtener su nombre a partir del codigo de conexión
+    o que el mismo jugador se lo pase, enviara por broadcast una señal de tipo "playerWon" u otra que cuando lo
+    reciban el resto de clientes, terminan el juego*/
     if(messageAsObject.game_status == "finish"){
-      let playerWon = messageAsObject.player_won;
-      console.log("Player won: "+playerWon);
+      let uuidv4Winner = metadata.id;
+      let winnerAlias = messageAsObject.player_won;
+      // let winnerAlias = listPlayersConnected.find((player) => player.uuidv4 === uuidv4Winner).alias;
+      console.log("Player won: "+winnerAlias);
+      const rst = { type: "playerWon", winner: winnerAlias };
+      broadcast(rst);
     }
 
     /* Aqui se deben recoger y tratar los datos que envie cada cliente respecto a su movimiento */
-    if(messageAsObject.type == "movementInfo"){
+    if(messageAsObject.player_x && messageAsObject.player_y){
       let posX = messageAsObject.player_x;
       let posY = messageAsObject.player_y;
       let playerName = messageAsObject.player_alias;
@@ -537,7 +543,7 @@ function isOverlappingUnsuitableZone(totem, unsuitableZones) {
   return false;
 }
 
-async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listPlayersConnected) {
+async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listPlayersConnected, totemsByPlayer, totemsWidth, totemsHeight) {
 
   if (modelScene == null) {
     modelScene = this.currentModelScene;
@@ -549,7 +555,8 @@ async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listP
   let sceneGameHeight = modelScene.sceneGameHeight;
   let unsuitableZones = modelScene.unsuitableZones;
 
-  // loop through every player and generate totems for their cycle
+  try{
+      // loop through every player and generate totems for their cycle
   if (listPlayersConnected.length > 0){
     for (let i = 0; i < listPlayersConnected.length; i++) {
       let player = listPlayersConnected[i];
@@ -560,7 +567,7 @@ async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listP
       const cycleId = cycles[0].idCycle;
 
       // generate totems for the cycle and add them to the multiplayer list
-      const totems = await generateTotemsList(cycleId, 5, 75, 25, currentModelScene);
+      const totems = await generateTotemsList(cycleId, totemsByPlayer, totemsWidth, totemsHeight, currentModelScene);
       totems.forEach((totem) => {
         if (!listTotemsMultiplayer.some(t => overlap(t, totem) || isOutOfScene(totem, sceneGameWidth, sceneGameHeight) || isOverlappingUnsuitableZone(t, unsuitableZones))) {
           listTotemsMultiplayer.push(totem);
@@ -569,53 +576,66 @@ async function recalculateTotems(modelScene = null, listTotemsMultiplayer, listP
     }
   }
 
-  // send the list of totems to all clients
-  console.log("The totems for multiplayer are: ", listTotemsMultiplayer);
-  const rst = { type: "SendTotemsMultiplayer", totems: listTotemsMultiplayer };
-  await broadcast(rst);
+    // send the list of totems to all clients
+    console.log("The totems for multiplayer are: ", listTotemsMultiplayer);
+    const rst = { type: "recalculateTotems", totems: listTotemsMultiplayer };
+    await broadcast(rst);
+  }catch(e){
+    console.log("ERROR: " + e.stack)
+  }
+
 }
 
 /* Esta funcion nos crea un totem con la descripcion 
 sin las letras tipo a), b), c) etc delante ni espacios vacios por delante o detras */
 async function generateTotem(idTotem, idCycle, totemWidth, totemHeight, modelScene = null) {
-  const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
-  const nameCycle = cycles[0].nameCycle;
-
-  if (modelScene == null) {
-    modelScene = this.currentModelScene;
+  try{
+    const cycles = await queryDatabase(`SELECT * FROM cycle WHERE idCycle=${idCycle}`);
+    const nameCycle = cycles[0].nameCycle;
+  
+    if (modelScene == null) {
+      modelScene = this.currentModelScene;
+    }
+  
+    const sceneGameWidth = currentModelScene.sceneGameWidth;
+    const sceneGameHeight = currentModelScene.sceneGameHeight;
+  
+    const occupations = await queryDatabase(`SELECT * FROM ocupation WHERE cycle_idCycle=${idCycle} ORDER BY RAND() LIMIT 1`);
+    let descriptionOcupation = occupations[0].descriptionOcupation;
+  
+    // remove characters using regular expressions and the replace method
+    descriptionOcupation = descriptionOcupation.replace(/^\w\)\s*/, ''); // remove letter and ')' at the start of the string
+    descriptionOcupation = descriptionOcupation.replace(/\.\s*$/, ''); // remove '.' and spaces at the end of the string
+  
+    let posX = Math.floor(Math.random() * (sceneGameWidth - totemWidth));
+    let posY = Math.floor(Math.random() * (sceneGameHeight - totemHeight));
+  
+    return new totem(idTotem, descriptionOcupation, nameCycle, posX, posY, totemWidth, totemHeight);
+  }catch(e){
+    console.log("ERROR: " + e.stack)
   }
 
-  const sceneGameWidth = currentModelScene.sceneGameWidth;
-  const sceneGameHeight = currentModelScene.sceneGameHeight;
-
-  const occupations = await queryDatabase(`SELECT * FROM ocupation WHERE cycle_idCycle=${idCycle} ORDER BY RAND() LIMIT 1`);
-  let descriptionOcupation = occupations[0].descriptionOcupation;
-
-  // remove characters using regular expressions and the replace method
-  descriptionOcupation = descriptionOcupation.replace(/^\w\)\s*/, ''); // remove letter and ')' at the start of the string
-  descriptionOcupation = descriptionOcupation.replace(/\.\s*$/, ''); // remove '.' and spaces at the end of the string
-
-  let posX = Math.floor(Math.random() * (sceneGameWidth - totemWidth));
-  let posY = Math.floor(Math.random() * (sceneGameHeight - totemHeight));
-
-  return new totem(idTotem, descriptionOcupation, nameCycle, posX, posY, totemWidth, totemHeight);
 }
 
 function formatTotemsList(results) {
   let jsonTotems = {
     "totems": []
   };
-  for (let i = 0; i < results.length; i++) {
-    let totem = results[i];
-    jsonTotems.totems.push({
-      "idTotem": totem.idTotem,
-      "text": totem.text,
-      "cycleLabel": totem.cycleLabel,
-      "posX": totem.posX,
-      "posY": totem.posY,
-      "width": totem.width,
-      "height": totem.height
-    });
+  try{
+    for (let i = 0; i < results.length; i++) {
+      let totem = results[i];
+      jsonTotems.totems.push({
+        "idTotem": totem.idTotem,
+        "text": totem.text,
+        "cycleLabel": totem.cycleLabel,
+        "posX": totem.posX,
+        "posY": totem.posY,
+        "width": totem.width,
+        "height": totem.height
+      });
+    }
+  }catch(e){
+    console.log("ERROR: " + e.stack)
   }
   return jsonTotems;
 }
@@ -623,11 +643,15 @@ function formatTotemsList(results) {
 /* Funcion para establecer el escenario o mapa de juego, con un ancho y alto
 y la posibilidad de añadir areas donde no se pueden generar totems */
 function setModelScene(sceneGameWidth, sceneGameHeight, unsuitableZones = []) {
-  const unsuitableZonesValidated = unsuitableZones.filter((zone) => zone instanceof UnsuitableZone);
-  const model = new modelScene(sceneGameWidth, sceneGameHeight);
-  model.unsuitableZones = unsuitableZonesValidated;
-  this.currentModelScene = model;
-  return model;
+  try{
+    const unsuitableZonesValidated = unsuitableZones.filter((zone) => zone instanceof UnsuitableZone);
+    const model = new modelScene(sceneGameWidth, sceneGameHeight);
+    model.unsuitableZones = unsuitableZonesValidated;
+    this.currentModelScene = model;
+    return model;
+  }catch(e){
+    console.log("ERROR: " + e.stack)
+  }
 }
 
 function getDate(){
@@ -681,7 +705,7 @@ function gameLoop(){
         gameInfo.players.push(playerInfo);
       }
       console.log("This info will be broadcasted: "+ rst)
-      var rst = { type: "gameInfoBroadcast", gameInfo: gameInfo };
+      var rst = { type: "playersMovement", gameInfo: gameInfo };
       broadcast(rst)
   }
 
@@ -723,20 +747,24 @@ function addPlayer(name, spriteSelected, posX, posY, cycle, uuidv4) {
 conexion por websocket, este pueda finalizar partida, permanecer conectado y hacer otra partida
 con otros datos */
 function updatePlayer(name, spriteSelected, posX, posY, cycle, uuidv4) {
-  const playerToUpdate = listPlayersConnected.find(player => player.uuidv4 === uuidv4);
+  try{
+    const playerToUpdate = listPlayersConnected.find(player => player.uuidv4 === uuidv4);
 
-  if (!playerToUpdate) {
-    console.log(`Could not find player with UUID ${uuidv4}`);
-    return;
+    if (!playerToUpdate) {
+      console.log(`Could not find player with UUID ${uuidv4}`);
+      return;
+    }
+  
+    playerToUpdate.alias = name;
+    playerToUpdate.spriteSelected = spriteSelected;
+    playerToUpdate.posX = posX;
+    playerToUpdate.posY = posY;
+    playerToUpdate.cycle = cycle;
+  
+    console.log(`Updated player with UUID ${uuidv4}: ${playerToUpdate.toString()}`);
+  }catch(e){
+    console.log("ERROR: " + e.stack)
   }
-
-  playerToUpdate.alias = name;
-  playerToUpdate.spriteSelected = spriteSelected;
-  playerToUpdate.posX = posX;
-  playerToUpdate.posY = posY;
-  playerToUpdate.cycle = cycle;
-
-  console.log(`Updated player with UUID ${uuidv4}: ${playerToUpdate.toString()}`);
 }
 
 
@@ -755,10 +783,6 @@ function removeTotem(idTotem){
   }
   return removed;
 }
-
-
-/* Para guardar un usuario en RAM, en un array y para quitarlo cuando se desconecte */
-
 
 /* Esta funcion sera llamada cuando se tenga que finalizar el juego,
 se puede aprovechar para resetear los valores del juego */
