@@ -23,7 +23,8 @@ let timeEndMatch;
 /* Variable para controlar si el juego esta en ejecucion o no */
 let gameRunning;
 /* Variables para calcular fotogramas si dejamos eso en manos del server */
-let currentFPS = 60;
+let fps = 5;
+let currentFPS = 5;
 let TARGET_MS = 1000 / currentFPS;
 let frameCount;
 let fpsStartTime;
@@ -76,12 +77,12 @@ function appListen () {
   // printRandomTotemsList(3, 10, 75, 25);
 
   // console.log("creating test players and his totems: \n");
-  // addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
-  // addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
+  addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
+  addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
   // addPlayer("player3", 1, 250, 200, "Administració i finances",  uuidv4());
   // console.log("List of players connected:"+ listPlayersConnected);
 
-  recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected, 5, 75, 25);
+  // recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected, 5, 75, 25);
   // idTotemAvailable= recalculateTotems(currentModelScene, listTotemsMultiplayer, listPlayersConnected);
 
   console.log("List of totems:"+ listTotemsMultiplayer);
@@ -369,6 +370,12 @@ wss.on('connection', (ws, req) => {
       if(gameRunning == false){
         startGame();
       }
+
+      /* Se ha conectado un jugador, hemos generado totems nuevos que los pasamos
+      y le pasamos los datos del ultimo jugador */
+      let rst ={ type: "startGame", totems: totemsGenerated, newPlayer: listPlayersConnected[listPlayersConnected.length-1] };
+      ws.send(JSON.stringify(rst));
+      // broadcast(rst);
 
     }
 
@@ -671,8 +678,7 @@ function startGame(){
   gameLoop();
 }
 
-/* Funcion de la practica de Pong, sin la logica del pong, habra que poner la logica de nuestro juego
-que se ejecuta fotograma a fotograma */
+/* Funcion de la logica de juego que se ejecuta fotograma a fotograma */
 function gameLoop(){
   try{
     const startTime = getDate();
@@ -692,7 +698,7 @@ function gameLoop(){
       }
 
       // Cridar aquí la funció que fa un broadcast amb les dades del joc a tots els clients
-      var gameInfo = {};
+      var gameInfo = {"players": []};
       for (let i = 0; i < listPlayersConnected.length; i++) {
         let player = listPlayersConnected[i];
         let playerInfo = {
@@ -704,10 +710,24 @@ function gameLoop(){
         };
         gameInfo.players.push(playerInfo);
       }
-      console.log("This info will be broadcasted: "+ rst)
-      var rst = { type: "playersMovement", gameInfo: gameInfo };
+      var rst = {status:"OK", type: "players", message: gameInfo };
+      console.log("***** This info will be broadcasted: "+ rst)
       broadcast(rst)
   }
+
+    const endTime = getDate();
+    const elapsedTime = endTime - startTime;
+    const remainingTime = Math.max(1, TARGET_MS - elapsedTime);
+    frameCount++;
+    const fpsElapsedTime = endTime - fpsStartTime;
+    if (fpsElapsedTime >= 500) {
+        currentFPS = (frameCount / fpsElapsedTime) * 1000;
+        frameCount = 0;
+        fpsStartTime = endTime;
+    }
+    if(gameRunning){
+      setTimeout(() => { setImmediate(gameLoop); }, remainingTime);
+    }
 
   }catch(err){
     console.log(err);
@@ -731,7 +751,7 @@ async function saveDisconnection(id) {
   console.log("saveDisconnection");
   try {
     const date = getDate();
-    await queryDatabase(`UPDATE connections SET timeDisconnection = ${date} WHERE uuidv4 = '${id}'`);
+    await queryDatabase(`UPDATE connections SET timeDisconnection = '${date}' WHERE uuidv4 = '${id}'`);
   } catch (error) {
     console.error(error);
   }
@@ -837,7 +857,7 @@ function queryDatabase (query) {
       host: process.env.MYSQLHOST || "localhost",
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER || "root",
-      password: process.env.MYSQLPASSWORD || "localhost",
+      password: process.env.MYSQLPASSWORD || "p@ssw0rd",
       database: process.env.MYSQLDATABASE || "ipop_game"
     });
 
