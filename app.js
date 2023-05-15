@@ -21,13 +21,15 @@ let timeStartMatch;
 let timeEndMatch;
 
 /* Variable para controlar si el juego esta en ejecucion o no */
-let gameRunning;
+let gameRunning = false;
 /* Variables para calcular fotogramas si dejamos eso en manos del server */
 let fps = 5;
 let currentFPS = 5;
-let TARGET_MS = 1000 / currentFPS;
-let frameCount;
-let fpsStartTime;
+let TARGET_FPS = 5;
+// let TARGET_MS = 1000 / TARGET_FPS;
+const TARGET_MS = 200;
+let lastBroadcastTime = 0;
+let gameInterval;
 
 /* Para ubicar totems en el mapa mientras los generamos esta esta classe que hace de modelo de un mapa rectangular
 de momento por defecto tendra 1000 x 1000, una unidad de medida abstracta 
@@ -77,8 +79,8 @@ function appListen () {
   // printRandomTotemsList(3, 10, 75, 25);
 
   // console.log("creating test players and his totems: \n");
-  addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
-  addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
+  // addPlayer("player1", 1, 100, 100, "Sistemes microinformàtics i xarxes",  uuidv4());
+  // addPlayer("player2", 2, 200, 300, "Desenvolupament d’aplicacions multiplataforma",  uuidv4());
   // addPlayer("player3", 1, 250, 200, "Administració i finances",  uuidv4());
   // console.log("List of players connected:"+ listPlayersConnected);
 
@@ -313,9 +315,11 @@ wss.on('connection', (ws, req) => {
     removePlayer(idClientDisconnected);
     saveDisconnection(idClientDisconnected);
 
+    console.log("list players:"+ listPlayersConnected.length);
     /* Si esa desconexion es la del ultimo jugador, 
     reinicia lista totems y detiene el juego, incluyendo el broadcast */
-    if (listPlayersConnected.length == 0) {
+    if (listPlayersConnected.length == 0) { 
+      console.log("Last player disconnected, game will stop");  
       listTotemsMultiplayer = [];
       stopLoop();
     }
@@ -323,7 +327,7 @@ wss.on('connection', (ws, req) => {
 
   // What to do when a client message is received
   ws.on('message', (bufferedMessage) => {
-    // console.log("Message received from client: " + bufferedMessage)
+    console.log("Message received from client: " + bufferedMessage)
     let rst;
 
     var messageAsString = bufferedMessage.toString()
@@ -338,12 +342,15 @@ wss.on('connection', (ws, req) => {
     /* Segun el parametro type (u otro que mandemos en el ws) podremos activar un codigo u otro
     aqui podria ir el codigo de que hacer cuando un usuario se conecta e indica que quiere jugar*/
     if(messageAsObject.type == "startGame"){
+      console.log("startGame");
 
       const nameCycle = messageAsObject.nameCycle;
       const alias = messageAsObject.alias;
       const spriteSelected = messageAsObject.spriteSelected;
       const posX = messageAsObject.posX;
       const posY = messageAsObject.posY;
+
+      console.log("Player wants to start game: "+alias+" "+spriteSelected+" "+posX+" "+posY+" "+nameCycle);
 
       const metadata = socketsClients.get(ws);
       const id = metadata.id;
@@ -373,15 +380,17 @@ wss.on('connection', (ws, req) => {
 
       /* Se ha conectado un jugador, hemos generado totems nuevos que los pasamos
       y le pasamos los datos del ultimo jugador */
-      let rst ={ type: "startGame", totems: totemsGenerated, newPlayer: listPlayersConnected[listPlayersConnected.length-1] };
+      let rst ={type: "startGame", totems: totemsGenerated, newPlayer: listPlayersConnected[listPlayersConnected.length-1] };
+      console.log("Will respond " +JSON.stringify(rst));
       ws.send(JSON.stringify(rst));
-      // broadcast(rst);
+      broadcast(rst);
 
     }
 
     /* El mensaje para indicar que se ha recogido un totem, se pasara la id de totem
     y el server lo elimina de la lista */
     if(messageAsObject.totem_id){
+      console.log("Totem collected: "+messageAsObject.totem_id);
       let idTotem = messageAsObject.totem_id;
       if(removeTotem(idTotem)){
         console.log("Totem removed: "+idTotem);
@@ -398,9 +407,11 @@ wss.on('connection', (ws, req) => {
       let winnerAlias = messageAsObject.player_won;
       // let winnerAlias = listPlayersConnected.find((player) => player.uuidv4 === uuidv4Winner).alias;
       console.log("Player won: "+winnerAlias);
-      const rst = { type: "playerWon", winner: winnerAlias };
+
+      const rst = {"game_status": "finish", winner: winnerAlias };
       broadcast(rst);
     }
+
 
     /* Aqui se deben recoger y tratar los datos que envie cada cliente respecto a su movimiento */
     if(messageAsObject.player_x && messageAsObject.player_y){
@@ -408,18 +419,58 @@ wss.on('connection', (ws, req) => {
       let posY = messageAsObject.player_y;
       let playerName = messageAsObject.player_alias;
       let playerSprite = messageAsObject.player_sprite;
+      let cycle = messageAsObject.nameCycle;
+      // console.log("Player moved: "+metadata.id+" "+playerName+" "+playerSprite+" "+posX+" "+posY+"");
 
       // let { posX, posY } = messageAsObject.positions;
 
       let idPlayerToUpdate = metadata.id;
-      let playerToUpdate = listPlayersConnected.find((player) => player.uuidv4 === id);
+      let playerToUpdate = listPlayersConnected.find((player) => player.uuidv4 === idPlayerToUpdate);
+      if(playerToUpdate == null){
+        console.log("Player not found, it will be added");
+        addPlayer(playerName, playerSprite, posX, posY, cycle, idPlayerToUpdate);
+        playerToUpdate = listPlayersConnected.find((player) => player.uuidv4 === idPlayerToUpdate);
+
+        /* Si el juego no esta corriendo es porque o bien acabamos de empezar servidor o se ha desconectado
+        el ultimo websocket o todos los jugadores han parado el juego y se ha parado el bucle, asi que ahora que tenemos una señal de empezar
+        el juego, lo iniciamos */
+        if(gameRunning == false){
+          startGame();
+        }
+
+        /* Le pasamos nombre del ciclo, buscara la id, cuantos totems generamos y su ancho y alto */
+        // let idCycle = getIdCycle(cycle);
+        // let numberOfTotems = messageAsObject.numberOfTotems;
+        // let totemWidth = messageAsObject.totemWidth;
+        // let totemHeight = messageAsObject.totemHeight;
+
+        // let totemsGenerated;
+
+        // const handleTotemsGenerated = async () => {
+        //   totemsGenerated = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
+      
+        //   for (let t of totemsGenerated) {
+        //     let newTotem = new totem(t.idTotem, t.text, t.cycleLabel, t.posX, t.posY, t.width, t.height);
+        //     this.listTotemsMultiplayer.push(newTotem);
+        //   }
+        // };
+
+        // handleTotemsGenerated().then(() => {
+        //   // Code to execute after totemsGenerated is handled successfully
+        // })
+        // .catch((error) => {
+        //   console.error(error);
+        // });
+
+      }
       playerToUpdate.updatePositions(posX, posY);
     }
 
     // console.log("Will respond " +JSON.stringify(rst));
     ws.send(JSON.stringify(rst));
-  })
-})
+  }
+)})
+
 
 // Send a message to all websocket clients
 async function broadcast (obj) {
@@ -445,6 +496,7 @@ tries y maxTries cuentan los intentos de generar un totem, devolvera una lista c
 
 Esta funcion esta pensada tanto para que un cliente en modo un jugador pida una lista de totems como para generarlos*/
 async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, modelScene = null) {
+  console.log("generateTotemsList");
   const totems = [];
   const maxTries = 10;
 
@@ -670,66 +722,44 @@ function getDate(){
 
 /* Esta funcion es la que se llamara cuando empieze el juego multijugador
 Todas las variables que controlan el estado del juego se pueden resetar aqui*/
-function startGame(){
+function startGame() {
   timeStartMatch = getDate();
   gameRunning = true;
-  console.log("Started game execution at " + timeStartMatch);
+  console.log("Started broadcast loop at " + timeStartMatch);
 
+  // Call gameLoop initially
   gameLoop();
+
+  // Set up interval for gameLoop
+  gameInterval= setInterval(gameLoop, TARGET_MS);
 }
 
-/* Funcion de la logica de juego que se ejecuta fotograma a fotograma */
-function gameLoop(){
-  try{
-    const startTime = getDate();
+function gameLoop() {
+  console.log("gameLoop_1");
+  try {
+    console.log("Current time: " + getDate());
+    console.log("Broadcasting");
 
-    if (currentFPS >= 1) {
-      // Cridar aquí la funció que actualitza el joc (segons currentFPS)
+    /* Broadcast de info de jugadores */
+    const gameInfo = {
+      players: listPlayersConnected.map((player) => ({
+        name: player.alias,
+        spriteSelected: player.spriteSelected,
+        posX: player.posX,
+        posY: player.posY,
+        uuidv4: player.uuidv4,
+      })),
+    };
+    const rst = { status: "OK", type: "players", message: gameInfo };
+    console.log("Will broadcast " + JSON.stringify(rst));
+    broadcast(rst);
 
-      try{
-  
-        if(fps < 1){
-          return;
-        }
+    /* Broadcast de totems */
+    const rst2 = {type: "game_totems", message: formatTotemsList(listTotemsMultiplayer)};
+    console.log("Will broadcast " + JSON.stringify(rst2));
+    broadcast(rst2);
 
-
-      }catch(err){
-        console.log(err);
-      }
-
-      // Cridar aquí la funció que fa un broadcast amb les dades del joc a tots els clients
-      var gameInfo = {"players": []};
-      for (let i = 0; i < listPlayersConnected.length; i++) {
-        let player = listPlayersConnected[i];
-        let playerInfo = {
-          name: player.alias,
-          spriteSelected: player.spriteSelected,
-          posX: player.posX,
-          posY: player.posY,
-          uuidv4: player.uuidv4,
-        };
-        gameInfo.players.push(playerInfo);
-      }
-      var rst = {status:"OK", type: "players", message: gameInfo };
-      console.log("***** This info will be broadcasted: "+ rst)
-      broadcast(rst)
-  }
-
-    const endTime = getDate();
-    const elapsedTime = endTime - startTime;
-    const remainingTime = Math.max(1, TARGET_MS - elapsedTime);
-    frameCount++;
-    const fpsElapsedTime = endTime - fpsStartTime;
-    if (fpsElapsedTime >= 500) {
-        currentFPS = (frameCount / fpsElapsedTime) * 1000;
-        frameCount = 0;
-        fpsStartTime = endTime;
-    }
-    if(gameRunning){
-      setTimeout(() => { setImmediate(gameLoop); }, remainingTime);
-    }
-
-  }catch(err){
+  } catch (err) {
     console.log(err);
   }
 }
@@ -794,7 +824,7 @@ function removePlayer(uuidv4) {
 }
 
 function removeTotem(idTotem){
-  const index = totems.findIndex((totem) => totem.idTotem === idTotem);
+  const index = listTotemsMultiplayer.findIndex((totem) => totem.idTotem === idTotem);
   let removed = false;
   
   if (index !== -1) {
@@ -806,8 +836,9 @@ function removeTotem(idTotem){
 
 /* Esta funcion sera llamada cuando se tenga que finalizar el juego,
 se puede aprovechar para resetear los valores del juego */
-function stopLoop(){
+function stopLoop() {
   gameRunning = false;
+  clearInterval(gameInterval);
 
   timeEndMatch = getDate();
   console.log("Stopped game execution at " + timeEndMatch);
@@ -869,3 +900,4 @@ function queryDatabase (query) {
     connection.end();
   })
 }
+
