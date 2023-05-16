@@ -34,7 +34,7 @@ let gameInterval;
 /* Para ubicar totems en el mapa mientras los generamos esta esta classe que hace de modelo de un mapa rectangular
 de momento por defecto tendra 1000 x 1000, una unidad de medida abstracta 
 pero que nos permite ubicar los totems en este escenario dandoles un tamaño en este mapa*/
-let currentModelScene = new modelScene.modelScene(1000, 1000);
+let currentModelScene = new modelScene.modelScene(2050, 2050);
 
 /* Para guardar en RAM los usuarios conectados */
 let listPlayersConnected = [];
