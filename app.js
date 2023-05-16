@@ -345,24 +345,26 @@ wss.on('connection', (ws, req) => {
       console.log("startGame");
 
       const nameCycle = messageAsObject.nameCycle;
-      const alias = messageAsObject.alias;
-      const spriteSelected = messageAsObject.spriteSelected;
-      const posX = messageAsObject.posX;
-      const posY = messageAsObject.posY;
+      const alias = messageAsObject.player_alias;
+      const spriteSelected = messageAsObject.player_sprite;
 
-      console.log("Player wants to start game: "+alias+" "+spriteSelected+" "+posX+" "+posY+" "+nameCycle);
+      console.log("Player wants to start game: "+alias+" "+spriteSelected+" "+nameCycle);
 
       const metadata = socketsClients.get(ws);
       const id = metadata.id;
-      
+      let posX =1050;
+      let posY =350;
       /* Este jugador que empieza, lo añadimos a la lista de jugadores listPlayersConnected */
       addPlayer(alias, spriteSelected, posX, posY, nameCycle, id);
 
       /* Le pasamos nombre del ciclo, buscara la id, cuantos totems generamos y su ancho y alto */
       let idCycle = getIdCycle(nameCycle);
-      let numberOfTotems = messageAsObject.numberOfTotems;
-      let totemWidth = messageAsObject.totemWidth;
-      let totemHeight = messageAsObject.totemHeight;
+      // let numberOfTotems = messageAsObject.numberOfTotems;
+      // let totemWidth = messageAsObject.totemWidth;
+      // let totemHeight = messageAsObject.totemHeight;
+      let numberOfTotems = 5;
+      let totemWidth = 192;
+      let totemHeight = 192;
 
       totemsGenerated = generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
 
@@ -440,27 +442,38 @@ wss.on('connection', (ws, req) => {
 
         /* Le pasamos nombre del ciclo, buscara la id, cuantos totems generamos y su ancho y alto */
         // let idCycle = getIdCycle(cycle);
-        // let numberOfTotems = messageAsObject.numberOfTotems;
-        // let totemWidth = messageAsObject.totemWidth;
-        // let totemHeight = messageAsObject.totemHeight;
+        let nameCycle = playerToUpdate.cycle;
+        let numberOfTotems = 5;
+        let totemWidth = 192;
+        let totemHeight = 192;
 
-        // let totemsGenerated;
+        let totemsGenerated;
 
-        // const handleTotemsGenerated = async () => {
-        //   totemsGenerated = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
+        const handleTotemsGenerated = async () => {
+          console.log("** The player cycle name is: ", nameCycle);
+          const cycles = await queryDatabase("SELECT * FROM cycle WHERE nameCycle = '" + nameCycle + "'");
+          const idCycle = cycles[0].idCycle;
+          
+          console.log("*** inside handleTotemsGenerated we have: "+idCycle);
+          totemsGenerated = await generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeight, currentModelScene);
       
-        //   for (let t of totemsGenerated) {
-        //     let newTotem = new totem(t.idTotem, t.text, t.cycleLabel, t.posX, t.posY, t.width, t.height);
-        //     this.listTotemsMultiplayer.push(newTotem);
-        //   }
-        // };
+          console.log("**** totemsGenerated: "+JSON.stringify(totemsGenerated));
+          for (let t of totemsGenerated) {
+            console.log("***** totem generated (t): "+JSON.stringify(t));
+            // let newTotem = new totem(t.idTotem, t.text, t.cycleLabel, t.posX, t.posY, t.width, t.height);
+            // console.log("****** newTotem: "+JSON.stringify(newTotem));
+            // this.listTotemsMultiplayer.push(newTotem);
+            listTotemsMultiplayer.push(t);
+          }
+        };
 
-        // handleTotemsGenerated().then(() => {
-        //   // Code to execute after totemsGenerated is handled successfully
-        // })
-        // .catch((error) => {
-        //   console.error(error);
-        // });
+        console.log("* We will call handleTotemsGenerated: ");
+        handleTotemsGenerated().then(() => {
+          // Code to execute after totemsGenerated is handled successfully
+        })
+        .catch((error) => {
+          console.error(error);
+        });
 
       }
       playerToUpdate.updatePositions(posX, posY);
@@ -507,6 +520,9 @@ async function generateTotemsList(idCycle, numberOfTotems, totemWidth, totemHeig
   let sceneGameWidth = modelScene.sceneGameWidth;
   let sceneGameHeight = modelScene.sceneGameHeight;
   let unsuitableZones = modelScene.unsuitableZones;
+
+  // let idCycle = getIdCycle(nameCycle);
+  // console.log("idCycle: "+idCycle);
 
   /* Parte que nos genera los totems del ciclo */
   try {
